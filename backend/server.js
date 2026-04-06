@@ -23,21 +23,13 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 (async () => {
     console.log('--- Testing Supabase Connection ---');
     // Simpler test: check if we can reach the 'staff' table which worked before
-    const { data, error } = await supabase.from('staff').select('staff_id, password').eq('role', 'Relationship Officer').limit(1);
+    const { data: staff, error } = await supabase.from('staff').select('staff_id').limit(1);
     if (error) {
         console.error('❌ Supabase Connection Test Failed!');
         console.dir(error, { depth: null });
     } else {
         console.log('✅ Supabase Connection SUCCESS!');
-        console.log('Test Staff ID:', data[0]?.staff_id);
-        console.log('Test Password:', data[0]?.password);
-        
-        const { data: member, error: memberError } = await supabase.from('members').select('id, name, center_id').limit(1);
-        if (member && member[0]) {
-            console.log('Test Member ID:', member[0].id);
-            console.log('Test Member Name:', member[0].name);
-            console.log('Test Center ID:', member[0].center_id);
-        }
+        console.log('Successfully reached the "staff" table.');
     }
 })();
 
