@@ -36,6 +36,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // CORS - Allow frontend URL from env or fallback to localhost
 const allowedOrigins = [
     process.env.FRONTEND_URL,
+    'https://loan-application-three.vercel.app',
     'http://localhost:5173',
     'http://localhost:4173',
     'http://127.0.0.1:5173',
