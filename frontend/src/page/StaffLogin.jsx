@@ -21,9 +21,12 @@ function StaffLogin() {
     setError('');
 
     try {
+      const normalizedStaffId = staffId.trim().toUpperCase();
+      const normalizedPassword = password.trim();
+
       const response = await axios.post(`${API_URL}/staff/login`, {
-        staff_id: staffId.toUpperCase(),
-        password
+        staff_id: normalizedStaffId,
+        password: normalizedPassword
       });
 
       const { staff } = response.data;
@@ -33,10 +36,12 @@ function StaffLogin() {
         return;
       }
 
+      // Consistent with AuthContext.jsx login function
       login(staff);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Invalid Staff ID or password');
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Invalid Staff ID or password';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -106,15 +111,18 @@ function StaffLogin() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <input
-                    type="text"
-                    className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-gray-800/60 border border-gray-700 text-white placeholder-gray-500 font-mono uppercase tracking-widest text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 transition-all"
-                    placeholder="STF001"
-                    value={staffId}
-                    onChange={(e) => setStaffId(e.target.value)}
-                    required
-                    autoComplete="off"
-                  />
+                    <input
+                      type="text"
+                      className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-gray-800/60 border border-gray-700 text-white placeholder-gray-500 font-mono uppercase tracking-widest text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 transition-all"
+                      placeholder="STF001"
+                      value={staffId}
+                      onChange={(e) => setStaffId(e.target.value)}
+                      required
+                      autoComplete="off"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck="false"
+                    />
                 </div>
               </div>
 
@@ -136,8 +144,11 @@ function StaffLogin() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck="false"
                   />
-                  <button
+                    <button
                     type="button"
                     className="absolute inset-y-0 right-4 flex items-center text-gray-500 hover:text-gray-300 transition-colors"
                     onClick={() => setShowPassword((p) => !p)}
