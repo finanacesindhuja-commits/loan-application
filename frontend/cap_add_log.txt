@@ -1,0 +1,6 @@
+﻿ΓêÜ Adding native android project in android in 258.78ms
+ΓêÜ add in 260.09ms
+[warn] sync could not run--missing dist directory.
+[success] android platform added!
+Follow the Developer Workflow guide to get building:
+https://capacitorjs.com/docs/basics/workflow

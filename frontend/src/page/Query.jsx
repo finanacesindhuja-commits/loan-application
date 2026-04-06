@@ -22,7 +22,8 @@ function Query() {
   const [success, setSuccess] = useState(false);
   const [activeLoan, setActiveLoan] = useState(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005';
+  // Use production URL as primary fallback for mobile builds
+  const API_URL = import.meta.env.VITE_API_URL || 'https://loan-application-tnvs.onrender.com';
 
   useEffect(() => {
     if (user?.staff_id) {

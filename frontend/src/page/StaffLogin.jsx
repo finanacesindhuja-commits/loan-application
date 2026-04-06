@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5005';
+// Use production URL as primary fallback for mobile builds
+const API_URL = import.meta.env.VITE_API_URL || 'https://loan-application-tnvs.onrender.com';
 
 function StaffLogin() {
   const [staffId, setStaffId] = useState('');
