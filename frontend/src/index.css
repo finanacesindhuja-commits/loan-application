@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+body {
+  @apply bg-gray-50 text-gray-900;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Confetti Animation */
+.confetti {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  background-color: #f2d74e;
+  position: absolute;
+  top: -10px;
+  user-select: none;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.confetti.diamond {
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+}
+
+.confetti.ribbon {
+  width: 15px;
+  height: 5px;
+}
+
+@keyframes fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes sideSway {
+  0% { margin-left: 0px; }
+  50% { margin-left: 50px; }
+  100% { margin-left: -50px; }
+}
+
+/* Success Modal Animations */
+@keyframes scaleIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.4s ease-out forwards;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
