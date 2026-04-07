@@ -21,24 +21,33 @@ function StaffLogin() {
     setError('');
 
     try {
-      const normalizedStaffId = staffId.trim().toUpperCase();
+      const normalizedStaffId = staffId.trim(); // Removed toUpperCase() to match exact server data
       const normalizedPassword = password.trim();
+
+      console.log('Attempting login for:', normalizedStaffId);
 
       const response = await axios.post(`${API_URL}/staff/login`, {
         staff_id: normalizedStaffId,
         password: normalizedPassword
       });
 
+      console.log('Login response:', response.data);
+
       const { staff } = response.data;
       if (staff.role !== 'Relationship Officer') {
-        setError('Access denied. Only Relationship Officers are allowed.');
+        setError(`Access denied. Your role is ${staff.role || 'unknown'}. Only Relationship Officers are allowed.`);
         setIsLoading(false);
         return;
       }
 
-      // Consistent with AuthContext.jsx login function
+      // Explicitly matching App.jsx and AuthContext.jsx expectation
+      localStorage.setItem('staffInfo', JSON.stringify(staff));
+
+      // Call context login
       login(staff);
-      navigate('/dashboard');
+
+      // Direct navigation to centers to avoid extra redirects
+      navigate('/centers');
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Invalid Staff ID or password';
       setError(errorMessage);

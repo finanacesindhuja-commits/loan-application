@@ -1,2 +1,0 @@
-﻿origin	https://github.com/finanacesindhuja-commits/loan-application.git (fetch)
-origin	https://github.com/finanacesindhuja-commits/loan-application.git (push)

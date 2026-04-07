@@ -26,7 +26,7 @@ const [nomineeAgeValid, setNomineeAgeValid] = useState(null);
 
 
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5005";
+  const API_URL = import.meta.env.VITE_API_URL || "https://loan-application-tnvs.onrender.com";
 
   const calculateAge = (dob) => {
     if (!dob) return "";

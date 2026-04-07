@@ -64,7 +64,10 @@ app.use((req, res, next) => {
 });
 
 // Multer for temporary file storage
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024 } // 15MB limit per file
+});
 
 // --- API Endpoints ---
 
@@ -196,8 +199,11 @@ app.post('/api/loans/replace-document', upload.single('replacementFile'), async 
         const { loanId, fieldName } = req.body;
         const file = req.file;
 
-        if (!loanId || !fieldName || !file) {
-            return res.status(400).json({ error: 'Missing loanId, fieldName, or file' });
+        if (!loanId || !fieldName) {
+            return res.status(400).json({ error: 'Missing loanId or fieldName' });
+        }
+        if (!file) {
+            return res.status(400).json({ error: 'No replacement file was uploaded or it exceeded the 15MB limit.' });
         }
 
         console.log(`DEBUG: Replacing document for loan ${loanId}, field ${fieldName}`);
@@ -345,6 +351,8 @@ app.post('/api/loans', upload.fields([
 process.on('uncaughtException', (err) => {
     console.error('🌋 UNCAUGHT EXCEPTION - Server would have crashed!');
     console.error(err);
+    // Optionally restart via PM2/Nodemon by exiting with an error code
+    process.exit(1);
 });
 
 app.listen(PORT, () => {
