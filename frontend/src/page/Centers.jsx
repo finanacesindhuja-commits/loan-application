@@ -12,15 +12,21 @@ export default function Centers() {
   const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5005";
 
   // Get current staff info
+  // Get current staff info
   const staffInfo = JSON.parse(localStorage.getItem("staffInfo") || "{}");
-  const staffId = staffInfo?.staff_id || staffInfo?.staffId;
+  // Ensure staffId is consistently extracted and formatted
+  const staffId = (staffInfo?.staff_id || staffInfo?.staffId)?.toString()?.toUpperCase();
 
   const capitalize = (str = "") =>
     str.charAt(0).toUpperCase() + str.slice(1);
 
-  // Get deleted center IDs from localStorage
+  // Get deleted center IDs from localStorage (Temporary UI filter)
   const getDeletedCenters = () => {
-    return JSON.parse(localStorage.getItem("deletedCenters") || "[]");
+    try {
+      return JSON.parse(localStorage.getItem("deletedCenters") || "[]");
+    } catch {
+      return [];
+    }
   };
 
   // Save deleted center IDs to localStorage
@@ -31,23 +37,32 @@ export default function Centers() {
   // Fetch centers – filtered by this staff only
   useEffect(() => {
     if (!staffId) return;
+    
+    setLoading(true);
     axios.get(`${API_URL}/api/centers`, { params: { staffId } })
       .then((res) => {
         const deleted = getDeletedCenters();
-        setCenters(res.data.filter((c) => !deleted.includes(c.id)));
+        // Only filter out if the ID is actually in the deleted list
+        const visibleCenters = res.data.filter((c) => !deleted.includes(c.id));
+        setCenters(visibleCenters);
+        setError("");
       })
       .catch((err) => {
+        console.error("Fetch Centers Error:", err);
         if (err.response?.status === 401 || err.response?.status === 403) {
-          navigate("/"); // redirect on unauth
+          navigate("/");
         } else {
-          setError("Failed to load centers")
+          setError("Failed to load centers. Please try again.");
         }
-      });
+      })
+      .finally(() => setLoading(false));
   }, [API_URL, navigate, staffId]);
 
   // Add Center – tag with staff_id
   const addCenter = async () => {
     if (!name.trim()) return;
+    if (!staffId) return alert("Session expired. Please login again.");
+    
     const formattedName = capitalize(name.trim());
 
     const exists = centers.some(
@@ -61,17 +76,27 @@ export default function Centers() {
 
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/api/centers`, { name: formattedName, staffId });
+      const res = await axios.post(`${API_URL}/api/centers`, { 
+        name: formattedName, 
+        staffId: staffId.toUpperCase() 
+      });
 
-      setCenters((prev) => [...prev, res.data]);
+      // When adding a new center, we ensure it's NOT in the deleted list
+      const newCenter = res.data;
+      const deleted = getDeletedCenters();
+      if (deleted.includes(newCenter.id)) {
+        // Remove from deleted list if it somehow exists there (prevents disappearing on reload)
+        const updatedDeleted = deleted.filter(id => id !== newCenter.id);
+        saveDeletedCenters(updatedDeleted);
+      }
+
+      setCenters((prev) => [...prev, newCenter]);
       setName("");
       setError("");
     } catch (err) {
-      if (err.response?.status === 409) {
-        setError("Center name already exists");
-      } else {
-        setError("Something went wrong");
-      }
+      console.error("Add Center Error:", err);
+      const msg = err.response?.data?.error || "Something went wrong";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -89,77 +114,141 @@ export default function Centers() {
     navigate("/members");
   };
 
-  // UI delete with persistence
+  // UI delete with persistence (local hide)
   const removeCenterFromUI = (id) => {
+    if (!window.confirm("Are you sure you want to hide this center?")) return;
     setCenters((prev) => prev.filter((c) => c.id !== id));
     const deleted = getDeletedCenters();
-    saveDeletedCenters([...deleted, id]);
+    if (!deleted.includes(id)) {
+        saveDeletedCenters([...deleted, id]);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4">
-      <div className="w-full max-w-2xl bg-white shadow-lg rounded-lg p-4">
-        <h2 className="text-2xl font-bold mb-4 text-center">Centers</h2>
+    <div className="min-h-screen bg-gray-50 flex justify-center p-4 md:p-8">
+      <div className="w-full max-w-3xl flex flex-col gap-3 md:gap-6">
+        
+        {/* Page Header */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 p-1">
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2 text-gray-400 text-[8px] md:text-[10px] font-black uppercase tracking-normal md:tracking-widest mb-1">
+              <span>Dashboard</span>
+              <span>/</span>
+              <span className="text-indigo-500">Collection Centers</span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight leading-tight">
+              Center Management
+            </h2>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {/* Staff Badge */}
+            <div className="bg-white px-4 py-3 rounded-[1.2rem] md:rounded-[2rem] shadow-sm border border-gray-100 flex items-center gap-3">
+               <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-50 rounded-full hidden md:flex items-center justify-center text-emerald-500 font-black italic shadow-inner">
+                  {staffInfo?.name?.charAt(0).toUpperCase() || "S"}
+               </div>
+               <div className="flex flex-col text-left">
+                  <span className="text-[8px] font-black text-gray-400 uppercase tracking-normal md:tracking-widest leading-none mb-0.5">Officer Duty</span>
+                  <span className="text-sm md:text-lg font-black text-gray-900 tracking-tight">{staffInfo?.name || "Staff"}</span>
+                  <span className="text-[8px] font-bold text-indigo-500 uppercase tracking-normal md:tracking-widest mt-0.5 opacity-60">{staffId || "ID-000"}</span>
+               </div>
+            </div>
+          </div>
+        </div>
+
+
+
+
 
         {error && (
-          <div className="mb-4 p-3 text-center rounded bg-red-100 text-red-700">
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 font-bold text-sm flex items-center gap-3 animate-pulse">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
             {error}
           </div>
         )}
 
-        <div className="flex mb-6">
-          <input
-            placeholder="New Center"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setError("");
-            }}
-            className="flex-1 p-3 border rounded-l-lg"
-          />
-          <button
-            onClick={addCenter}
-            disabled={loading}
-            className={`px-4 rounded-r-lg text-white flex items-center justify-center gap-2
-              ${loading ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}
-            `}
-          >
-            {loading ? (
-              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-            ) : (
-              "Add"
-            )}
-          </button>
-        </div>
-
-        <ul className="space-y-3">
-          {centers.map((c) => (
-            <li
-              key={c.id}
-              className="flex justify-between items-center p-3 border rounded"
+        {/* Add Center Box */}
+        <div className="bg-white shadow-xl shadow-gray-200/50 rounded-[2rem] p-6 md:p-8 border border-gray-100 flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row bg-gray-50 p-2 rounded-2xl border border-gray-100 gap-2 shadow-inner focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
+            <input
+              placeholder="Type new center name here..."
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setError("");
+              }}
+              className="flex-1 p-4 bg-transparent focus:outline-none font-bold text-gray-700 placeholder:text-gray-300"
+            />
+            <button
+              onClick={addCenter}
+              disabled={loading}
+              className={`px-8 py-4 sm:py-0 rounded-xl text-white font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2
+                ${loading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200"}
+              `}
             >
-              <span className="font-medium">{capitalize(c.name)}</span>
+              {loading ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              ) : (
+                "Add"
+              )}
+            </button>
+          </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => selectCenter(c)}
-                  className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600"
-                >
-                  Open
-                </button>
-
-                <button
-                  onClick={() => removeCenterFromUI(c.id)}
-                  className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                >
-                  Delete
-                </button>
+          {/* Centers List */}
+          <div className="space-y-4">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+              Assigned Centers
+            </p>
+            
+            {centers.length === 0 && !loading ? (
+              <div className="py-12 bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-100 text-center flex flex-col items-center gap-3">
+                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-gray-300">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                 </div>
+                 <p className="text-gray-400 font-bold italic text-sm">No centers found for your ID.</p>
               </div>
-            </li>
-          ))}
-        </ul>
+            ) : (
+              <ul className="space-y-4">
+                {centers.map((c) => (
+                  <li
+                    key={c.id}
+                    className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 bg-white border border-gray-50 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 hover:border-indigo-100 group gap-4"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-black text-gray-900 text-xl tracking-tight group-hover:text-indigo-600 transition-colors uppercase">{capitalize(c.name)}</span>
+                      <span className="text-[10px] font-black text-gray-400 mt-1 tracking-widest uppercase flex items-center gap-1">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        ID: {staffId}
+                      </span>
+                    </div>
+
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <button
+                        onClick={() => selectCenter(c)}
+                        className="flex-1 sm:flex-none justify-center bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
+                      >
+                        Open
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                      </button>
+
+                      <button
+                        onClick={() => removeCenterFromUI(c.id)}
+                        className="p-3 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all border border-rose-100 group/del"
+                        title="Delete Center"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </div>
     </div>
+
   );
 }
 

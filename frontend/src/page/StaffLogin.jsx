@@ -57,157 +57,122 @@ function StaffLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #0f0c29, #302b63, #24243e)' }}>
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
+      
+      {/* Premium Background Accents */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-50/50 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-50/40 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none" />
 
-      {/* Animated background blobs */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-80px] left-[-80px] w-72 h-72 rounded-full opacity-20 blur-3xl animate-pulse"
-          style={{ background: 'radial-gradient(circle, #7c3aed, transparent)' }} />
-        <div className="absolute bottom-[-60px] right-[-60px] w-72 h-72 rounded-full opacity-20 blur-3xl animate-pulse"
-          style={{ background: 'radial-gradient(circle, #2563eb, transparent)', animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full opacity-10 blur-3xl"
-          style={{ background: 'radial-gradient(circle, #a78bfa, transparent)' }} />
-      </div>
+      {/* Login Card Container */}
+      <div className="w-full max-w-md animate-fade-in relative z-10">
+        
+        {/* Logo Section */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-3xl shadow-2xl shadow-indigo-100/50 mb-6 group transition-all duration-500 hover:scale-110">
+            <svg className="w-10 h-10 text-indigo-600 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-1.17-1.528A9.018 9.018 0 0111.947 13m4.927 3.245C10.18 19.454 3.583 12.47 6.91 4.601c.823-1.941 2.897-3.1 4.939-3.1s4.116 1.159 4.939 3.1c1.24 2.923 1.017 6.009-.512 8.591M19 18h2m-2-4h2m-2-4h2M5 18h2m-2-4h2m-2-4h2" />
+            </svg>
+          </div>
+          <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-tight">Staff Portal</h1>
+          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-2">Sindhuja Micro Finance</p>
+        </div>
 
-      {/* Card */}
-      <div className="relative z-10 w-full max-w-md mx-4">
-        <div className="rounded-3xl p-1"
-          style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.5), rgba(37,99,235,0.5))' }}>
-          <div className="bg-gray-950 rounded-[22px] px-8 py-10">
+        {/* Form Card */}
+        <div className="bg-white rounded-[2.5rem] p-8 md:p-10 shadow-2xl shadow-indigo-200/40 border border-gray-50 relative overflow-hidden group">
+          {/* Subtle line across the card */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-emerald-500 transition-transform duration-700 origin-left" />
 
-            {/* Logo / Header */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4 shadow-2xl"
-                style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}>
-                {/* Bank / Shield Icon */}
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                    d="M3 10l9-7 9 7v11a1 1 0 01-1 1H4a1 1 0 01-1-1V10z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                    d="M9 21V12h6v9" />
-                </svg>
-              </div>
-              <h1 className="text-3xl font-extrabold text-white tracking-tight">Staff Portal</h1>
-              <p className="text-gray-400 mt-1 text-sm">Loan Management System</p>
-              <div className="mt-3 flex items-center justify-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-green-400 text-xs font-medium">Relationship Officers Only</span>
+          {error && (
+            <div className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 animate-shake">
+              <div className="w-8 h-8 bg-rose-500 text-white rounded-full flex items-center justify-center flex-shrink-0 animate-pulse">!</div>
+              <p className="text-rose-600 font-black text-[10px] uppercase tracking-widest">{error}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Staff ID</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="w-5 h-5 text-gray-300 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="e.g. SF-101"
+                  className="w-full pl-12 pr-4 py-4 bg-gray-50/70 border border-transparent rounded-2xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all font-black text-gray-700 placeholder:text-gray-300 placeholder:font-medium shadow-inner"
+                  value={staffId}
+                  onChange={(e) => setStaffId(e.target.value)}
+                  required
+                />
               </div>
             </div>
 
-            {/* Error */}
-            {error && (
-              <div className="mb-5 flex items-center gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-red-300 text-sm font-medium">{error}</span>
-              </div>
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleLogin} className="space-y-5">
-
-              {/* Staff ID */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                  Staff ID
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                    <input
-                      type="text"
-                      className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-gray-800/60 border border-gray-700 text-white placeholder-gray-500 font-mono uppercase tracking-widest text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 transition-all"
-                      placeholder="STF001"
-                      value={staffId}
-                      onChange={(e) => setStaffId(e.target.value)}
-                      required
-                      autoComplete="off"
-                      autoCapitalize="none"
-                      autoCorrect="off"
-                      spellCheck="false"
-                    />
+            <div className="space-y-2">
+              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Secure Password</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="w-5 h-5 text-gray-300 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
                 </div>
-              </div>
-
-              {/* Password */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    className="w-full pl-12 pr-12 py-3.5 rounded-xl bg-gray-800/60 border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 transition-all"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck="false"
-                  />
-                    <button
-                    type="button"
-                    className="absolute inset-y-0 right-4 flex items-center text-gray-500 hover:text-gray-300 transition-colors"
-                    onClick={() => setShowPassword((p) => !p)}
-                  >
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  className="w-full pl-12 pr-12 py-4 bg-gray-50/70 border border-transparent rounded-2xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all font-black text-gray-700 placeholder:text-gray-300 placeholder:font-bold shadow-inner"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-300 hover:text-indigo-600 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     {showPassword ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                      </svg>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
                     ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     )}
-                  </button>
-                </div>
+                    {!showPassword && <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />}
+                  </svg>
+                </button>
               </div>
+            </div>
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-4 rounded-xl font-bold text-white text-sm tracking-wide transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-xl flex items-center justify-center gap-2"
-                style={{ background: isLoading ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
-              >
-                {isLoading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Authenticating...
-                  </>
-                ) : (
-                  <>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                    </svg>
-                    Sign In to Portal
-                  </>
-                )}
-              </button>
-            </form>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-xl shadow-indigo-100 hover:bg-indigo-700 hover:-translate-y-1 transition-all active:scale-95 disabled:opacity-50 disabled:translate-y-0 mt-8 group"
+            >
+              {isLoading ? (
+                <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  Connect Sync
+                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </form>
+        </div>
 
-            {/* Footer note */}
-            <p className="mt-6 text-center text-gray-600 text-xs">
-              🔒 Secure access · Relationship Officers only
-            </p>
+        {/* Support Section */}
+        <div className="mt-10 text-center">
+          <p className="text-gray-400 font-medium text-xs tracking-wide">
+            Access strictly monitored for <span className="text-indigo-700 font-black">Sindhuja Officers</span>
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-widest text-indigo-300">
+             <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> Live Server</span>
+             <span className="opacity-30">•</span>
+             <span>Secured SSL</span>
           </div>
         </div>
+
       </div>
     </div>
   );

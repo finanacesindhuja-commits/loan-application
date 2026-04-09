@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
 
 const DOCUMENT_MAP = {
   member_aadhaar_front_url: 'Member Aadhaar Front',
@@ -16,7 +18,9 @@ const DOCUMENT_MAP = {
 
 function Query() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loans, setLoans] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -93,19 +97,50 @@ function Query() {
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto min-h-screen pb-20">
-      <header className="mb-8 flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">Pending Queries</h1>
-          <p className="text-gray-500 font-medium mt-1">Replace requested documents using your camera.</p>
-        </div>
+      <div className="mb-6">
         <button 
-          onClick={fetchQueriedLoans}
-          className="px-5 py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-2xl shadow-lg shadow-indigo-200 transition-all font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-3 active:scale-95"
+          onClick={() => navigate(-1)} 
+          className="flex items-center gap-2 text-indigo-600 font-bold hover:text-indigo-800 transition-colors"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          Refresh Queries
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to Dashboard
         </button>
+      </div>
+      <header className="mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-4 p-1">
+
+        <div>
+          <h1 className="text-xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">Pending Queries</h1>
+          <p className="text-gray-500 font-medium text-[10px] md:text-sm mt-0.5">Replace documents using camera.</p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
+          {/* Staff Badge */}
+          <div className="bg-white px-4 py-3 rounded-[1.2rem] md:rounded-[1.8rem] shadow-sm border border-gray-100 flex items-center gap-3 flex-1 md:flex-initial">
+             <div className="w-8 h-8 md:w-10 md:h-10 bg-emerald-50 rounded-full hidden md:flex items-center justify-center text-emerald-500 font-black italic shadow-inner">
+                {user?.name?.charAt(0).toUpperCase() || "S"}
+             </div>
+             <div className="flex flex-col text-left">
+                <span className="text-[8px] font-black text-gray-400 uppercase tracking-normal md:tracking-widest leading-none mb-0.5">Officer Duty</span>
+                <span className="text-sm md:text-lg font-black text-gray-900 tracking-tight">{user?.name || "Staff"}</span>
+                <span className="text-[8px] font-bold text-indigo-500 uppercase tracking-normal md:tracking-widest mt-0.5 opacity-60">{user?.staff_id || "ID-000"}</span>
+             </div>
+          </div>
+
+          <button 
+            onClick={fetchQueriedLoans}
+            className="px-5 py-3.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-[1.2rem] shadow-lg shadow-indigo-100 transition-all font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+            <span>Refresh</span>
+          </button>
+        </div>
       </header>
+
+
+
+
 
       {loading ? (
         <div className="flex flex-col items-center justify-center h-64 space-y-4">

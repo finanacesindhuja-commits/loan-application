@@ -131,3 +131,4 @@ export default function ImageCrop({ file, onCropComplete, onCancel }) {
     </div>
   );
 }
+

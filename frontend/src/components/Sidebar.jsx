@@ -4,6 +4,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 function Sidebar({ children }) {
   const [isOpen, setIsOpen] = useState(false);
   const [staffName, setStaffName] = useState('Staff Member');
+  const [staffId, setStaffId] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -13,7 +14,7 @@ function Sidebar({ children }) {
       try {
         const staff = JSON.parse(staffInfo);
         if (staff.name) setStaffName(staff.name);
-        else if (staff.staff_id) setStaffName(staff.staff_id);
+        if (staff.staff_id) setStaffId(staff.staff_id);
       } catch (e) {
         console.error("Error parsing staffInfo", e);
       }
@@ -28,9 +29,9 @@ function Sidebar({ children }) {
   const navLinks = [
     { name: 'Centers', path: '/centers', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
     { name: 'Members', path: '/members', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' },
-    { name: 'New Application', path: '/loan-application', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
     { name: 'Query', path: '/query', icon: 'M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
   ];
+
 
   if (location.pathname === '/login') {
     return <>{children}</>;
@@ -127,9 +128,11 @@ function Sidebar({ children }) {
               <div className="overflow-hidden">
                 <p className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider mb-0.5">Logged in as</p>
                 <p className="text-white font-bold truncate text-sm">{staffName}</p>
+                <p className="text-indigo-400 font-bold text-[9px] uppercase tracking-widest mt-0.5">{staffId}</p>
               </div>
             </div>
           </div>
+
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center px-4 py-3.5 bg-rose-500/10 text-rose-300 rounded-xl hover:bg-rose-500 hover:text-white transition-all duration-300 font-bold text-sm border border-rose-500/20 hover:border-rose-500 hover:shadow-lg hover:shadow-rose-500/25 group overflow-hidden relative"

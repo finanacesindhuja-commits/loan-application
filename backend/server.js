@@ -39,21 +39,35 @@ const allowedOrigins = [
     'https://loan-application-three.vercel.app',
     'http://localhost:5173',
     'http://localhost:5174',
+    'http://localhost:5175',
     'http://localhost:4173',
     'http://127.0.0.1:5173',
 ].filter(Boolean);
 
 app.use(cors({
     origin: (origin, callback) => {
+        // Log all origins for debugging
+        console.log(`[CORS DEBUG] Origin: ${origin}`);
+        
         // Allow requests with no origin (mobile apps, curl, etc.)
         if (!origin) return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
+        
+        // Match specific allowed origins OR any localhost/127.0.0.1 port
+        const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
+        
+        if (allowedOrigins.includes(origin) || isLocalhost) {
             return callback(null, true);
         }
-        return callback(new Error('Not allowed by CORS'));
+        
+        console.log(`[CORS REJECTED] ${origin}`);
+        return callback(null, false); // Return false instead of Error for better handle
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// app.options('*', cors()); // Removed as it causes crash in Express 5
 
 app.use(express.json());
 
@@ -65,12 +79,16 @@ app.use((req, res, next) => {
 });
 
 // Multer for temporary file storage
-const upload = multer({ 
+const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 15 * 1024 * 1024 } // 15MB limit per file
 });
 
 // --- API Endpoints ---
+
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', time: new Date().toISOString() });
+});
 
 // Staff Login
 app.post('/staff/login', async (req, res) => {
@@ -109,20 +127,23 @@ app.post('/staff/login', async (req, res) => {
 app.get('/api/centers', async (req, res) => {
     console.log('DEBUG: Hitting GET /api/centers');
     try {
-        const { staffId } = req.query;
+        let { staffId } = req.query;
         let query = supabase.from('centers').select('*').order('name');
+        
         if (staffId) {
+            staffId = staffId.toUpperCase(); // Force consistency
             query = query.eq('staff_id', staffId);
         }
-        const { data, error } = await query;
         
+        const { data, error } = await query;
+
         if (error) {
             console.error('--- Supabase FULL Error Details ---');
             console.log(JSON.stringify(error, null, 2));
             return res.status(500).json({ error: error.message, details: error });
         }
-        
-        console.log('DEBUG: Supabase returned data:', data ? data.length : 0, 'rows');
+
+        console.log(`DEBUG: Found ${data?.length || 0} centers for staff: ${staffId}`);
         res.json(data || []);
     } catch (err) {
         console.error('❌ GET /api/centers Critical Error:', err);
@@ -132,11 +153,21 @@ app.get('/api/centers', async (req, res) => {
 
 app.post('/api/centers', async (req, res) => {
     try {
-        const { name, staffId } = req.body;
-        const { data, error } = await supabase.from('centers').insert([{ name, staff_id: staffId }]).select().single();
+        let { name, staffId } = req.body;
+        if (!staffId) {
+            return res.status(400).json({ error: 'Missing staffId. Please re-login.' });
+        }
+        
+        const { data, error } = await supabase
+            .from('centers')
+            .insert([{ name, staff_id: staffId.toUpperCase() }]) // Save as Uppercase
+            .select()
+            .single();
+
         if (error) throw error;
         res.json(data);
     } catch (err) {
+        console.error('❌ POST /api/centers Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -185,7 +216,7 @@ app.get('/api/loans/query/:staffId', async (req, res) => {
             .eq('staff_id', staffId)
             .eq('status', 'QUERY')
             .order('created_at', { ascending: false });
-        
+
         if (error) throw error;
         res.json(data || []);
     } catch (err) {
@@ -215,7 +246,7 @@ app.post('/api/loans/replace-document', upload.single('replacementFile'), async 
             .select(fieldName)
             .eq('id', loanId)
             .single();
-        
+
         const oldUrl = loanData ? loanData[fieldName] : null;
 
         // 2. Upload new file
@@ -272,7 +303,35 @@ app.post('/api/loans', upload.fields([
 ]), async (req, res) => {
     console.log('DEBUG: Starting Loan Submission for:', req.body.personName);
     try {
+        // 1. CHECK FOR DUPLICATE LOAN BY AADHAAR
+        const aadharNo = req.body.aadharNo;
+        if (aadharNo) {
+            const { data: existingLoan, error: checkError } = await supabase
+                .from('loans')
+                .select('id, status, loan_app_id')
+                .eq('aadhar_no', aadharNo)
+                .neq('status', 'REJECTED')
+                .limit(1)
+                .maybeSingle();
+
+            if (checkError) {
+                console.error('❌ Aadhaar Check Error:', checkError);
+            }
+
+            if (existingLoan) {
+                console.log(`DEBUG: Duplicate loan blocked for Aadhaar: ${aadharNo}. Existing ID: ${existingLoan.loan_app_id}`);
+                return res.status(409).json({ 
+                    error: 'DUPLICATE_LOAN', 
+                    message: `This member (Aadhaar: ${aadharNo}) already has an active loan application (${existingLoan.loan_app_id}).` 
+                });
+            }
+        }
+
+        // 2. GENERATE UNIQUE APP ID
+        const loanAppId = `APP-${Math.floor(100000 + Math.random() * 900000)}`;
+
         const dbLoanData = {
+            loan_app_id: loanAppId,
             member_id: req.body.memberId,
             center_id: req.body.centerId,
             member_cibil: req.body.memberCibil,
@@ -315,7 +374,7 @@ app.post('/api/loans', upload.fields([
                 if (req.files[field] && req.files[field][0]) {
                     const file = req.files[field][0];
                     console.log(`DEBUG: Uploading file for field: ${field} (${file.size} bytes)`);
-                    
+
                     const fileName = `loans/${Date.now()}-${file.originalname}`;
                     const { error: uploadError } = await supabase.storage
                         .from('loan-documents')
@@ -340,8 +399,8 @@ app.post('/api/loans', upload.fields([
             throw insertError;
         }
 
-        console.log('✅ Loan Submission Successful!');
-        res.json({ message: 'Loan submitted', loanId: data.id });
+        console.log(`✅ Loan Submission Successful! ID: ${data.id}, AppID: ${loanAppId}`);
+        res.json({ message: 'Loan submitted', loanId: data.id, loanAppId: data.loan_app_id });
     } catch (err) {
         console.error('❌ CRITICAL LOAN ERROR:', err);
         res.status(500).json({ error: err.message || 'Error submitting loan application' });
@@ -361,3 +420,10 @@ app.listen(PORT, () => {
     console.log(`🚀 SERVER RUNNING ON PORT ${PORT}`);
     console.log(`====================================`);
 });
+
+// Heartbeat to keep the event loop alive and debug
+setInterval(() => {
+    // console.log('Ping...');
+}, 60000);
+
+console.log('DEBUG: Script execution reached end of server.js');
