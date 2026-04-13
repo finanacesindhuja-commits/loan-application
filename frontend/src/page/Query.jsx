@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ImageCrop from './ImageCrop';
 
 
 const DOCUMENT_MAP = {
@@ -25,6 +26,12 @@ function Query() {
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [activeLoan, setActiveLoan] = useState(null);
+
+  // --- States for Image Cropping ---
+  const [showCrop, setShowCrop] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedField, setSelectedField] = useState("");
+  const [activeLoanForCrop, setActiveLoanForCrop] = useState(null);
 
   // Use production URL as primary fallback for mobile builds
   const API_URL = import.meta.env.VITE_API_URL || 'https://loan-application-tnvs.onrender.com';
@@ -64,18 +71,30 @@ function Query() {
     document.getElementById(`camera-input-${loanId}-${field}`).click();
   };
 
-  const onFileChange = async (e, loan, field) => {
+  const onFileChange = (e, loan, field) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // Instead of immediate upload, show crop UI
+    setSelectedFile(file);
+    setSelectedField(field);
+    setActiveLoanForCrop(loan);
+    setShowCrop(true);
+  };
+
+  const handleCroppedImage = async (blob) => {
+    if (!blob || !activeLoanForCrop) return;
+
+    const croppedFile = new File([blob], "cropped.jpg", { type: "image/jpeg" });
     setUploading(true);
-    setActiveLoan(loan);
+    setActiveLoan(activeLoanForCrop);
+    setShowCrop(false); // Close crop UI
 
     try {
       const formData = new FormData();
-      formData.append('loanId', loan.id);
-      formData.append('fieldName', field); // e.g. member_aadhaar_front_url
-      formData.append('replacementFile', file);
+      formData.append('loanId', activeLoanForCrop.id);
+      formData.append('fieldName', selectedField); // e.g. member_aadhaar_front_url
+      formData.append('replacementFile', croppedFile);
 
       await axios.post(`${API_URL}/api/loans/replace-document`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -85,6 +104,9 @@ function Query() {
       setTimeout(() => {
         setSuccess(false);
         setActiveLoan(null);
+        setActiveLoanForCrop(null);
+        setSelectedFile(null);
+        setSelectedField("");
         fetchQueriedLoans();
       }, 2500);
     } catch (err) {
@@ -92,6 +114,9 @@ function Query() {
       alert('Upload failed. Please try again.');
       setUploading(false);
       setActiveLoan(null);
+      setActiveLoanForCrop(null);
+      setSelectedFile(null);
+      setSelectedField("");
     }
   };
 
@@ -235,6 +260,19 @@ function Query() {
             );
           })}
         </div>
+      )}
+      {/* Image Cropping Modal */}
+      {showCrop && (
+        <ImageCrop 
+          file={selectedFile} 
+          onCropComplete={handleCroppedImage} 
+          onCancel={() => {
+            setShowCrop(false);
+            setSelectedFile(null);
+            setSelectedField("");
+            setActiveLoanForCrop(null);
+          }} 
+        />
       )}
     </div>
   );

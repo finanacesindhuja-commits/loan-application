@@ -172,6 +172,39 @@ app.post('/api/centers', async (req, res) => {
     }
 });
 
+// Import/Finalize a center - Moves APPROVED loans to READY FOR PD
+app.post('/api/centers/:centerId/import', async (req, res) => {
+    const { centerId } = req.params;
+    try {
+        console.log(`🚀 IMPORT: Finalizing center ${centerId}. Moving APPROVED loans to READY FOR PD...`);
+        
+        const { data, error } = await supabase
+            .from('loans')
+            .update({ status: 'READY FOR PD' })
+            .eq('center_id', centerId)
+            .eq('status', 'APPROVED')
+            .select();
+
+        if (error) throw error;
+        
+        // Mark center as imported
+        const { error: centerError } = await supabase
+            .from('centers')
+            .update({ is_imported: true })
+            .eq('id', centerId);
+
+        if (centerError) {
+             console.error(`⚠️ Warning: Failed to update is_imported for center ${centerId}. Ensure 'is_imported' column exists in Supabase.`, centerError.message);
+        }
+
+        console.log(`✅ IMPORT SUCCESS: Updated ${data?.length || 0} loans for center ${centerId}.`);
+        res.json({ message: `Successfully imported ${data?.length || 0} loans`, updatedCount: data?.length || 0 });
+    } catch (err) {
+        console.error('❌ IMPORT ERROR:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Members
 app.get('/api/members/:centerId', async (req, res) => {
     try {

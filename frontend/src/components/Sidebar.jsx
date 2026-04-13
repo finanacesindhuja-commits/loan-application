@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-
+import axios from 'axios';
 function Sidebar({ children }) {
   const [isOpen, setIsOpen] = useState(false);
   const [staffName, setStaffName] = useState('Staff Member');
   const [staffId, setStaffId] = useState('');
+  const [importedCenters, setImportedCenters] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5005";
 
   useEffect(() => {
     const staffInfo = localStorage.getItem('staffInfo');
@@ -14,12 +17,54 @@ function Sidebar({ children }) {
       try {
         const staff = JSON.parse(staffInfo);
         if (staff.name) setStaffName(staff.name);
-        if (staff.staff_id) setStaffId(staff.staff_id);
+        const sid = (staff.staff_id || staff.staffId)?.toString()?.toUpperCase();
+        if (sid) {
+          setStaffId(sid);
+          fetchImportedCenters(sid);
+        }
       } catch (e) {
         console.error("Error parsing staffInfo", e);
       }
     }
+
+    // Listen for updates from other components
+    const handleUpdate = () => {
+      const info = localStorage.getItem('staffInfo');
+      if (info) {
+        const staff = JSON.parse(info);
+        const sid = (staff.staff_id || staff.staffId)?.toString()?.toUpperCase();
+        if (sid) fetchImportedCenters(sid);
+      }
+    };
+
+    window.addEventListener('centersUpdated', handleUpdate);
+    return () => window.removeEventListener('centersUpdated', handleUpdate);
   }, []);
+
+  const fetchImportedCenters = async (sid) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/centers`, { params: { staffId: sid } });
+      const data = res.data;
+      
+      const deleted = JSON.parse(localStorage.getItem("deletedCenters") || "[]");
+      const localImported = JSON.parse(localStorage.getItem('localImportedCenters') || '[]');
+      
+      const imported = data.filter(c => 
+        (c.is_imported || localImported.includes(c.id)) && !deleted.includes(c.id)
+      );
+      setImportedCenters(imported);
+    } catch (err) {
+      console.error("Failed to fetch imported centers in sidebar", err);
+    }
+  };
+
+  const removeFromHistory = (id) => {
+    const deleted = JSON.parse(localStorage.getItem("deletedCenters") || "[]");
+    if (!deleted.includes(id)) {
+      localStorage.setItem("deletedCenters", JSON.stringify([...deleted, id]));
+    }
+    setImportedCenters(prev => prev.filter(c => c.id !== id));
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('staffInfo');
@@ -101,8 +146,8 @@ function Sidebar({ children }) {
                 className={({ isActive }) =>
                   `flex items-center px-4 py-3.5 rounded-xl font-bold transition-all duration-200 group ${
                     isActive
-                      ? 'bg-indigo-600/90 text-white shadow-lg shadow-indigo-900/20 ring-1 ring-indigo-500/50'
-                      : 'text-indigo-200 hover:bg-indigo-800/60 hover:text-white hover:pl-6'
+                       ? 'bg-indigo-600 shadow-lg shadow-indigo-900/20 ring-1 ring-indigo-500/50 text-white'
+                       : 'text-indigo-200 hover:bg-indigo-800/60 hover:text-white hover:pl-6'
                   }`
                 }
               >
@@ -116,6 +161,35 @@ function Sidebar({ children }) {
                 )}
               </NavLink>
             ))}
+
+            {/* Imported Centers Section */}
+            {importedCenters.length > 0 && (
+              <div className="mt-10 pt-6 border-t border-indigo-800/50">
+                <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] px-4 mb-4 flex items-center justify-between">
+                  <span>Import History</span>
+                  <span className="bg-indigo-800 px-2 py-0.5 rounded-full text-[8px]">{importedCenters.length}</span>
+                </p>
+                <div className="space-y-2 px-2 max-h-[250px] overflow-y-auto styled-scrollbar">
+                   {importedCenters.map(c => (
+                     <div key={c.id} className="group relative bg-indigo-950/40 border border-indigo-700/30 p-4 rounded-xl hover:bg-indigo-800/40 transition-all">
+                        <div className="flex justify-between items-start mb-1">
+                          <p className="text-xs font-black text-indigo-100 uppercase truncate pr-4">{c.name}</p>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); removeFromHistory(c.id); }}
+                            className="p-1 text-indigo-500 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                           <span className="text-[8px] font-bold text-indigo-400 uppercase tracking-widest">Sent to PD Stage</span>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+              </div>
+            )}
           </nav>
         </div>
 
