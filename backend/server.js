@@ -9,9 +9,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5005;
 
-// Supabase Configuration - Trimming to avoid hidden characters
-const supabaseUrl = process.env.SUPABASE_URL?.trim();
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+// Supabase Configuration
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
     console.error('❌ ERROR: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing in .env!');
@@ -33,48 +33,21 @@ const supabase = createClient(supabaseUrl, supabaseKey);
     }
 })();
 
-// CORS - Allow frontend URL from env or fallback to localhost
-const allowedOrigins = [
-    process.env.FRONTEND_URL,
-    'https://loan-application-three.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://localhost:4173',
-    'http://127.0.0.1:5173',
-].filter(Boolean);
-
+// CORS - Simple allow all for initial setup, but can be restricted
 app.use(cors({
-    origin: (origin, callback) => {
-        // Log all origins for debugging
-        console.log(`[CORS DEBUG] Origin: ${origin}`);
-        
-        // Allow requests with no origin (mobile apps, curl, etc.)
-        if (!origin) return callback(null, true);
-        
-        // Match specific allowed origins OR any localhost/127.0.0.1 port
-        const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
-        
-        if (allowedOrigins.includes(origin) || isLocalhost) {
-            return callback(null, true);
-        }
-        
-        console.log(`[CORS REJECTED] ${origin}`);
-        return callback(null, false); // Return false instead of Error for better handle
-    },
+    origin: '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// app.options('*', cors()); // Removed as it causes crash in Express 5
+app.options(/.*/, cors());
 
 app.use(express.json());
 
 // Request Logger
 app.use((req, res, next) => {
     console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
-    if (req.method === 'POST') console.log('Body:', JSON.stringify(req.body));
     next();
 });
 
@@ -90,7 +63,6 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-// Staff Login
 app.post('/staff/login', async (req, res) => {
     try {
         const { staff_id, password } = req.body;
@@ -392,6 +364,7 @@ app.post('/api/loans', upload.fields([
             staff_name: req.body.staffName,
             center_name: req.body.centerName,
             member_name: req.body.memberName,
+            status: "PENDING",
             first_cycle_rg_number: req.body.firstCycleRgNumber,
         };
 

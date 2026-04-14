@@ -6,6 +6,7 @@ import Centers from './page/Centers'
 import Members from './page/Members'
 import LoanApplicationFlow from './page/LoanApplicationFlow'
 import Query from './page/Query'
+import Tracking from './page/Tracking'
 import Sidebar from './components/Sidebar'
 import './index.css'
 
@@ -37,6 +38,12 @@ function App() {
           <Route path="/query" element={
             <ProtectedRoute>
               <Sidebar><Query /></Sidebar>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/tracking" element={
+            <ProtectedRoute>
+              <Sidebar><Tracking /></Sidebar>
             </ProtectedRoute>
           } />
 

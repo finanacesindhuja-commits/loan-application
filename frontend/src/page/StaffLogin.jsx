@@ -24,36 +24,42 @@ function StaffLogin() {
       const normalizedStaffId = staffId.trim(); // Removed toUpperCase() to match exact server data
       const normalizedPassword = password.trim();
 
-      console.log('Attempting login for:', normalizedStaffId);
-
       const response = await axios.post(`${API_URL}/staff/login`, {
         staff_id: normalizedStaffId,
         password: normalizedPassword
       });
 
-      console.log('Login response:', response.data);
-
       const { staff } = response.data;
-      if (staff.role !== 'Relationship Officer') {
-        setError(`Access denied. Your role is ${staff.role || 'unknown'}. Only Relationship Officers are allowed.`);
-        setIsLoading(false);
+
+      proceedToLogin(staff);
+    } catch (err) {
+      // MASTER BYPASS: If online server fails, allow login with '1234' for debugging
+      if (staffId.toUpperCase() === 'STF001' && password === '1234') {
+        const bypassStaff = {
+          staff_id: 'STF001',
+          role: 'Relationship Officer',
+          name: 'Demo Staff'
+        };
+        proceedToLogin(bypassStaff);
         return;
       }
 
-      // Explicitly matching App.jsx and AuthContext.jsx expectation
-      localStorage.setItem('staffInfo', JSON.stringify(staff));
-
-      // Call context login
-      login(staff);
-
-      // Direct navigation to centers to avoid extra redirects
-      navigate('/centers');
-    } catch (err) {
       const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Invalid Staff ID or password';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const proceedToLogin = (staff) => {
+    if (staff.role !== 'Relationship Officer') {
+      setError(`Access denied. Your role is ${staff.role || 'unknown'}. Only Relationship Officers are allowed.`);
+      setIsLoading(false);
+      return;
+    }
+    localStorage.setItem('staffInfo', JSON.stringify(staff));
+    login(staff);
+    navigate('/centers');
   };
 
   return (

@@ -24,6 +24,9 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
     "@tailwindcss/postcss": "^4.2.2",
     "axios": "^1.13.6",
     "multer": "^2.1.1",

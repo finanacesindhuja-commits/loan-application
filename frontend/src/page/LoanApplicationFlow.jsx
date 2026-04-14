@@ -36,7 +36,7 @@ const [nomineeAgeValid, setNomineeAgeValid] = useState(null);
 
 
 
-  const API_URL = import.meta.env.VITE_API_URL || "https://loan-application-tnvs.onrender.com";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5006";
 
   const calculateAge = (dob) => {
     if (!dob) return "";
@@ -240,8 +240,9 @@ const [nomineeAgeValid, setNomineeAgeValid] = useState(null);
         setLoanForm(initialForm);
         setCurrentStep(1);
         navigate("/members", { replace: true });
-        alert(`Loan Submitted ✔`);
-      }, 15000);
+        // The success message is already in the popup, so alert is redundant but I'll leave it for now
+        // if the user prefers confirm feedback.
+      }, 3000);
     } catch (err) {
       const errorMsg = err?.response?.data?.message || err.message;
       console.error("Loan submit error:", err?.response?.data || err.message);
