@@ -115,8 +115,20 @@ app.get('/api/centers', async (req, res) => {
             return res.status(500).json({ error: error.message, details: error });
         }
 
-        console.log(`DEBUG: Found ${data?.length || 0} centers for staff: ${staffId}`);
-        res.json(data || []);
+        // Fetch APPROVED loans to see if centers can be imported
+        let loansQuery = supabase.from('loans').select('center_id').eq('status', 'APPROVED');
+        if (staffId) loansQuery = loansQuery.eq('staff_id', staffId);
+        
+        const { data: approvedLoans } = await loansQuery;
+        const approvedCenterIds = new Set((approvedLoans || []).map(l => l.center_id?.toString()));
+
+        const enrichedData = data?.map(center => ({
+            ...center,
+            hasApprovedLoans: approvedCenterIds.has(center.id?.toString())
+        }));
+
+        console.log(`DEBUG: Found ${enrichedData?.length || 0} centers for staff: ${staffId}`);
+        res.json(enrichedData || []);
     } catch (err) {
         console.error('❌ GET /api/centers Critical Error:', err);
         res.status(500).json({ error: err.message });
