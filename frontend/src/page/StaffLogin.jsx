@@ -24,26 +24,31 @@ function StaffLogin() {
       const normalizedStaffId = staffId.trim(); // Removed toUpperCase() to match exact server data
       const normalizedPassword = password.trim();
 
+      console.log('Attempting login for:', normalizedStaffId);
+
       const response = await axios.post(`${API_URL}/staff/login`, {
         staff_id: normalizedStaffId,
         password: normalizedPassword
       });
 
-      const { staff } = response.data;
+      console.log('Login response:', response.data);
 
-      proceedToLogin(staff);
-    } catch (err) {
-      // MASTER BYPASS: If online server fails, allow login with '1234' for debugging
-      if (staffId.toUpperCase() === 'STF001' && password === '1234') {
-        const bypassStaff = {
-          staff_id: 'STF001',
-          role: 'Relationship Officer',
-          name: 'Demo Staff'
-        };
-        proceedToLogin(bypassStaff);
+      const { staff } = response.data;
+      if (staff.role !== 'Relationship Officer') {
+        setError(`Access denied. Your role is ${staff.role || 'unknown'}. Only Relationship Officers are allowed.`);
+        setIsLoading(false);
         return;
       }
 
+      // Explicitly matching App.jsx and AuthContext.jsx expectation
+      localStorage.setItem('staffInfo', JSON.stringify(staff));
+
+      // Call context login
+      login(staff);
+
+      // Direct navigation to centers to avoid extra redirects
+      navigate('/centers');
+    } catch (err) {
       const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Invalid Staff ID or password';
       setError(errorMessage);
     } finally {
@@ -51,27 +56,16 @@ function StaffLogin() {
     }
   };
 
-  const proceedToLogin = (staff) => {
-    if (staff.role !== 'Relationship Officer') {
-      setError(`Access denied. Your role is ${staff.role || 'unknown'}. Only Relationship Officers are allowed.`);
-      setIsLoading(false);
-      return;
-    }
-    localStorage.setItem('staffInfo', JSON.stringify(staff));
-    login(staff);
-    navigate('/centers');
-  };
-
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
-      
+
       {/* Premium Background Accents */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-50/50 rounded-full blur-[120px] -mr-64 -mt-64 pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-emerald-50/40 rounded-full blur-[120px] -ml-64 -mb-64 pointer-events-none" />
 
       {/* Login Card Container */}
       <div className="w-full max-w-md animate-fade-in relative z-10">
-        
+
         {/* Logo Section */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-3xl shadow-2xl shadow-indigo-100/50 mb-6 group transition-all duration-500 hover:scale-110">
@@ -173,9 +167,9 @@ function StaffLogin() {
             Access strictly monitored for <span className="text-indigo-700 font-black">Sindhuja Officers</span>
           </p>
           <div className="mt-4 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-widest text-indigo-300">
-             <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> Live Server</span>
-             <span className="opacity-30">•</span>
-             <span>Secured SSL</span>
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> Live Server</span>
+            <span className="opacity-30">•</span>
+            <span>Secured SSL</span>
           </div>
         </div>
 

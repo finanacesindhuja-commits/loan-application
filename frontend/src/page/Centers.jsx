@@ -12,7 +12,7 @@ export default function Centers() {
   const [showSuccess, setShowSuccess] = useState(false); // Success celebration overlay
   const navigate = useNavigate();
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5005";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5006";
 
   // Get current staff info
   // Get current staff info
@@ -40,19 +40,15 @@ export default function Centers() {
   // Fetch centers – filtered by this staff only
   useEffect(() => {
     if (!staffId) return;
+
+    // Clear stale deleted list (we use DB now for cross-device persistence)
+    localStorage.removeItem('deletedCenters');
+    localStorage.removeItem('localImportedCenters');
     
     setLoading(true);
     axios.get(`${API_URL}/api/centers`, { params: { staffId } })
       .then((res) => {
-        const deleted = getDeletedCenters();
-        const localImported = JSON.parse(localStorage.getItem('localImportedCenters') || '[]');
-        
-        // Only filter out if the ID is actually in the deleted list
-        const visibleCenters = res.data.filter((c) => !deleted.includes(c.id)).map(c => ({
-          ...c,
-          is_imported: c.is_imported || localImported.includes(c.id)
-        }));
-        setCenters(visibleCenters);
+        setCenters(res.data || []);
         setError("");
       })
       .catch((err) => {
@@ -128,12 +124,6 @@ export default function Centers() {
     setImporting(centerId);
     try {
       const res = await axios.post(`${API_URL}/api/centers/${centerId}/import`);
-      
-      // Store in local storage as fallback since DB column 'is_imported' might be missing
-      const localImported = JSON.parse(localStorage.getItem('localImportedCenters') || '[]');
-      if (!localImported.includes(centerId)) {
-        localStorage.setItem('localImportedCenters', JSON.stringify([...localImported, centerId]));
-      }
 
       // Trigger Success Celebration & Fly Animation
       setShowSuccess(true);
@@ -162,13 +152,15 @@ export default function Centers() {
   const activeCenters = centers.filter(c => !c.is_imported);
   const importedCenters = centers.filter(c => c.is_imported);
 
-  // UI delete with persistence (local hide)
-  const removeCenterFromUI = (id) => {
-    if (!window.confirm("Are you sure you want to hide this center?")) return;
-    setCenters((prev) => prev.filter((c) => c.id !== id));
-    const deleted = getDeletedCenters();
-    if (!deleted.includes(id)) {
-        saveDeletedCenters([...deleted, id]);
+  // Cross-device persistence: actually update DB so it hides on other devices
+  const removeCenterFromUI = async (id) => {
+    if (!window.confirm("Are you sure you want to hide this center across all devices?")) return;
+    try {
+      await axios.post(`${API_URL}/api/centers/${id}/hide`);
+      setCenters((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      console.error("Error hiding center:", err);
+      alert("Failed to hide center. Please check your connection.");
     }
   };
 

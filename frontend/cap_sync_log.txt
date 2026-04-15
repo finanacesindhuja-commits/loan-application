@@ -1,2 +1,0 @@
-﻿[error] android platform has not been added yet.
-        See the docs for adding the android platform: https://capacitorjs.com/docs/android#adding-the-android-platform

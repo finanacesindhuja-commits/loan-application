@@ -177,6 +177,29 @@ app.post('/api/centers/:centerId/import', async (req, res) => {
     }
 });
 
+// Hide Center (Cross-device persistence via pseudo-soft-delete)
+app.post('/api/centers/:centerId/hide', async (req, res) => {
+    const { centerId } = req.params;
+    try {
+        console.log(`DEBUG: Hiding center ${centerId} across all devices...`);
+        const { data: center } = await supabase.from('centers').select('staff_id').eq('id', centerId).single();
+        if (!center) return res.status(404).json({ error: 'Center not found' });
+        
+        // Prefix staff id to remove it from this staff's view without dropping records
+        const hiddenId = `DELETED_${center.staff_id}`;
+        const { error } = await supabase
+            .from('centers')
+            .update({ staff_id: hiddenId })
+            .eq('id', centerId);
+
+        if (error) throw error;
+        res.json({ message: 'Center successfully hidden globally' });
+    } catch (err) {
+        console.error('Hide Center Error:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Members
 app.get('/api/members/:centerId', async (req, res) => {
     try {

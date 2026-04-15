@@ -7,10 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "static-build": "vite build --base=./",
-    "preview": "vite preview",
-    "cap:sync": "npx cap sync",
-    "cap:open": "npx cap open android",
-    "cap:run": "npx cap run android"
+    "preview": "vite preview"
   },
   "devDependencies": {
     "@types/react": "^18.2.66",
@@ -24,9 +21,6 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
-    "@capacitor/android": "^8.3.0",
-    "@capacitor/cli": "^8.3.0",
-    "@capacitor/core": "^8.3.0",
     "@tailwindcss/postcss": "^4.2.2",
     "axios": "^1.13.6",
     "multer": "^2.1.1",
@@ -36,3 +30,4 @@
     "xlsx": "^0.18.5"
   }
 }
+
