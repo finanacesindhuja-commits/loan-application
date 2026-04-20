@@ -48,8 +48,28 @@ export default function Centers() {
     setLoading(true);
     axios.get(`${API_URL}/api/centers`, { params: { staffId } })
       .then((res) => {
-        setCenters(res.data || []);
+        const centerList = res.data || [];
+        setCenters(centerList);
         setError("");
+
+        // --- AUTO-SELECT LOGIC ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoCenterId = urlParams.get('auto_center_id');
+        const autoMemberId = urlParams.get('auto_member_id');
+
+        if (autoCenterId && centerList.length > 0) {
+          const targetCenter = centerList.find(c => c.id.toString() === autoCenterId.toString());
+          if (targetCenter) {
+            localStorage.setItem("center", JSON.stringify({
+              id: Number(targetCenter.id),
+              name: targetCenter.name,
+            }));
+            
+            // Redirect to members page, preserving the auto_member_id if it exists
+            const nextUrl = autoMemberId ? `/members?auto_member_id=${autoMemberId}` : "/members";
+            navigate(nextUrl);
+          }
+        }
       })
       .catch((err) => {
         console.error("Fetch Centers Error:", err);

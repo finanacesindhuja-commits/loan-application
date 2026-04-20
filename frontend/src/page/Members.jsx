@@ -34,21 +34,35 @@ export default function Members() {
         const membersData = membersRes.data;
         const loansData = loansRes.data;
 
-        setMembers(
-          membersData.map((m) => {
-            // Updated to use 'member_id' correctly
-            const loan = loansData.find(
-              (l) => Number(l.member_id) === Number(m.id)
-            );
+        const processedMembers = membersData.map((m) => {
+          // Updated to use 'member_id' correctly
+          const loan = loansData.find(
+            (l) => Number(l.member_id) === Number(m.id)
+          );
 
-            return {
-              ...m,
-              id: Number(m.id),
-              loanStatus: loan ? loan.status : null,
-              loanAppId: loan ? loan.loan_app_id : null, // Store the APP-XXXXXX ID
-            };
-          })
-        );
+          return {
+            ...m,
+            id: Number(m.id),
+            loanStatus: loan ? loan.status : null,
+            loanAppId: loan ? loan.loan_app_id : null, // Store the APP-XXXXXX ID
+          };
+        });
+
+        setMembers(processedMembers);
+
+        // --- AUTO-SELECT LOGIC ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoMemberId = urlParams.get('auto_member_id');
+        if (autoMemberId && processedMembers.length > 0) {
+          const targetMember = processedMembers.find(m => m.id.toString() === autoMemberId.toString());
+          if (targetMember) {
+            // Only auto-apply if they don't have an active loan (or it was rejected)
+            if (!targetMember.loanStatus || targetMember.loanStatus === "REJECTED" || targetMember.loanStatus === "CLOSED") {
+              localStorage.setItem("member", JSON.stringify(targetMember));
+              navigate("/loan-application");
+            }
+          }
+        }
       } catch (err) {
         if (err.response?.status === 401 || err.response?.status === 403) {
           navigate("/"); // redirect on unauth

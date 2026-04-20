@@ -12,10 +12,11 @@ export default function LoanApplicationFlow() {
 
   const [currentStep, setCurrentStep] = useState(1);
   
-  // Guard: Block if member already has a non-rejected loan
   useEffect(() => {
-    if (member?.loanStatus && member.loanStatus !== "REJECTED") {
-        alert(`This member already has a ${member.loanStatus} loan application.`);
+    // Block if member already has an active loan (anything EXCEPT Rejected or Closed counts as active)
+    const activeStatuses = ["PENDING", "APPROVED", "DISBURSED", "READY FOR PD", "QUERY", "RESUBMITTED", "CREDITED"];
+    if (member?.loanStatus && activeStatuses.includes(member.loanStatus.toUpperCase())) {
+        alert(`This member already has an active ${member.loanStatus} loan application.`);
         navigate("/members");
     }
   }, [member, navigate]);
