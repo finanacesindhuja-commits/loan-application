@@ -6,6 +6,7 @@ function Sidebar({ children }) {
   const [staffName, setStaffName] = useState('Staff Member');
   const [staffId, setStaffId] = useState('');
   const [importedCenters, setImportedCenters] = useState([]);
+  const [queryCount, setQueryCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,6 +22,7 @@ function Sidebar({ children }) {
         if (sid) {
           setStaffId(sid);
           fetchImportedCenters(sid);
+          fetchQueryCount(sid);
         }
       } catch (e) {
         console.error("Error parsing staffInfo", e);
@@ -33,7 +35,10 @@ function Sidebar({ children }) {
       if (info) {
         const staff = JSON.parse(info);
         const sid = (staff.staff_id || staff.staffId)?.toString()?.toUpperCase();
-        if (sid) fetchImportedCenters(sid);
+        if (sid) {
+          fetchImportedCenters(sid);
+          fetchQueryCount(sid);
+        }
       }
     };
 
@@ -50,11 +55,20 @@ function Sidebar({ children }) {
       const localImported = JSON.parse(localStorage.getItem('localImportedCenters') || '[]');
       
       const imported = data.filter(c => 
-        (c.is_imported || localImported.includes(c.id)) && !deleted.includes(c.id)
+        (c.is_imported || localImported.includes(c.id)) && !deleted.includes(c.id) && !c.isDisbursed
       );
       setImportedCenters(imported);
     } catch (err) {
       console.error("Failed to fetch imported centers in sidebar", err);
+    }
+  };
+
+  const fetchQueryCount = async (sid) => {
+    try {
+      const res = await axios.get(`${API_URL}/api/loans/query/${sid}`);
+      setQueryCount(res.data.length);
+    } catch (err) {
+      console.error("Failed to fetch query count in sidebar", err);
     }
   };
 
@@ -153,12 +167,19 @@ function Sidebar({ children }) {
                 }
               >
                 {({ isActive }) => (
-                  <>
-                    <svg className={`w-5 h-5 mr-3 transition-colors duration-200 ${isActive ? 'text-white' : 'text-indigo-400 group-hover:text-indigo-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={link.icon} />
-                    </svg>
-                    {link.name}
-                  </>
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center">
+                      <svg className={`w-5 h-5 mr-3 transition-colors duration-200 ${isActive ? 'text-white' : 'text-indigo-400 group-hover:text-indigo-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={link.icon} />
+                      </svg>
+                      {link.name}
+                    </div>
+                    {link.name === 'Query' && queryCount > 0 && (
+                      <span className="bg-rose-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-md animate-pulse">
+                        {queryCount}
+                      </span>
+                    )}
+                  </div>
                 )}
               </NavLink>
             ))}

@@ -115,17 +115,40 @@ app.get('/api/centers', async (req, res) => {
             return res.status(500).json({ error: error.message, details: error });
         }
 
-        // Fetch APPROVED loans to see if centers can be imported
-        let loansQuery = supabase.from('loans').select('center_id').eq('status', 'APPROVED');
-        if (staffId) loansQuery = loansQuery.eq('staff_id', staffId);
+        const centerIds = data?.map(c => c.id) || [];
         
-        const { data: approvedLoans } = await loansQuery;
-        const approvedCenterIds = new Set((approvedLoans || []).map(l => l.center_id?.toString()));
+        // Fetch all members for these centers
+        const { data: members } = await supabase.from('members').select('id, center_id').in('center_id', centerIds);
+        
+        // Fetch all loans for these centers
+        const { data: loans } = await supabase.from('loans').select('id, center_id, member_id, status').in('center_id', centerIds);
+        
+        const enrichedData = data?.map(center => {
+            const centerMembers = (members || []).filter(m => m.center_id === center.id);
+            const centerLoans = (loans || []).filter(l => l.center_id === center.id);
+            
+            let allApproved = false;
+            let isDisbursed = false;
 
-        const enrichedData = data?.map(center => ({
-            ...center,
-            hasApprovedLoans: approvedCenterIds.has(center.id?.toString())
-        }));
+            if (centerMembers.length > 0 && centerMembers.length === centerLoans.length) {
+                // Check if every loan is APPROVED
+                allApproved = centerLoans.every(l => l.status === 'APPROVED');
+            }
+
+            if (centerLoans.length > 0) {
+                // A center is considered 'disbursed' / finished if all its loans have moved past the active pipeline
+                isDisbursed = centerLoans.every(l => ['DISBURSED', 'CREDITED', 'REJECTED'].includes(l.status));
+            }
+
+            return {
+                ...center,
+                allMembersApproved: allApproved,
+                hasApprovedLoans: centerLoans.some(l => l.status === 'APPROVED'),
+                isDisbursed: isDisbursed,
+                memberCount: centerMembers.length,
+                loanCount: centerLoans.length
+            };
+        });
 
         console.log(`DEBUG: Found ${enrichedData?.length || 0} centers for staff: ${staffId}`);
         res.json(enrichedData || []);

@@ -330,14 +330,23 @@ export default function Centers() {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        {c.hasApprovedLoans && (
+                        <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase px-2">
+                            <span>Members: {c.memberCount || 0}</span>
+                            <span className={c.allMembersApproved ? 'text-emerald-500' : 'text-amber-500'}>
+                                {c.allMembersApproved ? 'All Approved' : 'Pending Approvals'}
+                            </span>
+                        </div>
+                        
+                        {(c.memberCount > 0) && (
                           <button
                             onClick={() => handleImport(c.id, c.name)}
-                            disabled={importing === c.id}
+                            disabled={!c.allMembersApproved || importing === c.id}
                             className={`w-full justify-center px-4 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center gap-2
-                              ${importing === c.id 
+                              ${!c.allMembersApproved 
                                   ? "bg-gray-100 text-gray-400 cursor-not-allowed shadow-none" 
-                                  : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"}
+                                  : importing === c.id 
+                                    ? "bg-emerald-500 text-white cursor-not-allowed shadow-none opacity-80" 
+                                    : "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200"}
                             `}
                           >
                             {importing === c.id ? (
@@ -345,7 +354,7 @@ export default function Centers() {
                             ) : (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                             )}
-                            IMPORT CENTER
+                            {c.allMembersApproved ? 'IMPORT CENTER' : 'WAITING FOR APPROVALS'}
                           </button>
                         )}
 

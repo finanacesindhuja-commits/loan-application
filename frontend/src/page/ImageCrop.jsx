@@ -4,40 +4,66 @@ import "react-image-crop/dist/ReactCrop.css";
 
 /* ===== Helper: crop image with rotation ===== */
 const getCroppedImage = (image, crop, rotation) => {
-  const canvas = document.createElement("canvas");
+  // 1. Create a canvas for full rotation of the image
+  const fullCanvas = document.createElement("canvas");
+  const fullCtx = fullCanvas.getContext("2d");
 
-  const scaleX = image.naturalWidth / image.width;
-  const scaleY = image.naturalHeight / image.height;
+  const angleRad = (rotation * Math.PI) / 180;
+  const is90or270 = Math.abs(rotation % 180) === 90;
+  
+  const originalWidth = image.naturalWidth;
+  const originalHeight = image.naturalHeight;
+
+  fullCanvas.width = is90or270 ? originalHeight : originalWidth;
+  fullCanvas.height = is90or270 ? originalWidth : originalHeight;
+
+  fullCtx.translate(fullCanvas.width / 2, fullCanvas.height / 2);
+  fullCtx.rotate(angleRad);
+  fullCtx.drawImage(image, -originalWidth / 2, -originalHeight / 2);
+
+  // 2. Now perform the crop on the fully rotated canvas
+  const cropCanvas = document.createElement("canvas");
+  const cropCtx = cropCanvas.getContext("2d");
+
+  // Calculate scales based on rotated dimensions
+  const scaleX = fullCanvas.width / image.width;
+  const scaleY = fullCanvas.height / image.height;
 
   const pixelWidth = crop.width * scaleX;
   const pixelHeight = crop.height * scaleY;
 
-  canvas.width = pixelWidth;
-  canvas.height = pixelHeight;
+  // Max dimension threshold for crisp but compressed storage (1200px)
+  const MAX_DIMENSION = 1200;
+  let targetWidth = pixelWidth;
+  let targetHeight = pixelHeight;
 
-  const ctx = canvas.getContext("2d");
+  if (pixelWidth > MAX_DIMENSION || pixelHeight > MAX_DIMENSION) {
+    if (pixelWidth > pixelHeight) {
+      targetWidth = MAX_DIMENSION;
+      targetHeight = (pixelHeight * MAX_DIMENSION) / pixelWidth;
+    } else {
+      targetHeight = MAX_DIMENSION;
+      targetWidth = (pixelWidth * MAX_DIMENSION) / pixelHeight;
+    }
+  }
 
-  ctx.save();
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate((rotation * Math.PI) / 180);
-  ctx.translate(-canvas.width / 2, -canvas.height / 2);
+  cropCanvas.width = targetWidth;
+  cropCanvas.height = targetHeight;
 
-  ctx.drawImage(
-    image,
+  cropCtx.drawImage(
+    fullCanvas,
     crop.x * scaleX,
     crop.y * scaleY,
     pixelWidth,
     pixelHeight,
     0,
     0,
-    canvas.width,
-    canvas.height
+    targetWidth,
+    targetHeight
   );
 
-  ctx.restore();
-
   return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.95);
+    cropCanvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.8);
   });
 };
 
