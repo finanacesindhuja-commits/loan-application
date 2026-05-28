@@ -1,4 +1,6 @@
 const express = require('express');
+const compression = require('compression');
+const NodeCache = require('node-cache');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const multer = require('multer');
@@ -7,6 +9,25 @@ const { createClient } = require('@supabase/supabase-js');
 dotenv.config();
 
 const app = express();
+
+const cache = new NodeCache({ stdTTL: 15 });
+const flushCache = () => cache.flushAll();
+const cacheMiddleware = (duration = 15) => (req, res, next) => {
+  if (req.method !== 'GET') return next();
+  const key = req.originalUrl;
+  const cachedResponse = cache.get(key);
+  if (cachedResponse) return res.json(cachedResponse);
+  res.sendResponse = res.json;
+  res.json = (body) => {
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      cache.set(key, body, duration);
+    }
+    res.sendResponse(body);
+  };
+  next();
+};
+
+app.use(compression());
 const PORT = process.env.PORT || 5005;
 
 // Supabase Configuration
@@ -44,6 +65,16 @@ app.use(cors({
 app.options(/.*/, cors());
 
 app.use(express.json());
+
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method) && res.statusCode >= 200 && res.statusCode < 300) {
+      flushCache();
+    }
+  });
+  next();
+});
+
 
 // Request Logger
 app.use((req, res, next) => {
@@ -96,7 +127,7 @@ app.post('/staff/login', async (req, res) => {
 });
 
 // Centers
-app.get('/api/centers', async (req, res) => {
+app.get('/api/centers', cacheMiddleware(10), async (req, res) => {
     console.log('DEBUG: Hitting GET /api/centers');
     try {
         let { staffId } = req.query;
@@ -259,7 +290,7 @@ app.post('/api/members', async (req, res) => {
 });
 
 // Loans
-app.get('/api/loans', async (req, res) => {
+app.get('/api/loans', cacheMiddleware(10), async (req, res) => {
     try {
         const { data, error } = await supabase.from('loans').select('*');
         if (error) throw error;
@@ -270,7 +301,7 @@ app.get('/api/loans', async (req, res) => {
 });
 
 // GET loans with 'Query' status for a specific staff member
-app.get('/api/loans/query/:staffId', async (req, res) => {
+app.get('/api/loans/query/:staffId', cacheMiddleware(10), async (req, res) => {
     try {
         const { staffId } = req.params;
         const { data, error } = await supabase
