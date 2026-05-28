@@ -449,6 +449,7 @@ app.post('/api/loans', upload.fields([
             member_email: req.body.memberEmail,
             address: req.body.address,
             pincode: req.body.pincode,
+            house_type: req.body.houseType,
             staff_id: req.body.staffId,
             staff_name: req.body.staffName,
             center_name: req.body.centerName,

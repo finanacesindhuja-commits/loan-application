@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS loans (
     member_email TEXT,
     address TEXT,
     pincode TEXT,
+    house_type TEXT,
 
     -- Document URLs (Uploaded to Supabase Storage)
     member_aadhaar_front_url TEXT,
