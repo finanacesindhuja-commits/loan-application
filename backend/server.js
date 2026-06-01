@@ -102,7 +102,7 @@ app.post('/staff/login', async (req, res) => {
         const { data: staff, error } = await supabase
             .from('staff')
             .select('*')
-            .eq('staff_id', staff_id?.toUpperCase())
+            .eq('staff_id', staff_id?.trim().toUpperCase())
             .eq('password', password)
             .single();
 
