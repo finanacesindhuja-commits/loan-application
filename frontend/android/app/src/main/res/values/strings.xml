@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">loan join</string>
+    <string name="title_activity_main">loan join</string>
+    <string name="package_name">com.sindhujafin.loanapp</string>
+    <string name="custom_url_scheme">com.sindhujafin.loanapp</string>
+</resources>

@@ -74,7 +74,7 @@ function StaffLogin() {
             </svg>
           </div>
           <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-tight">Staff Portal</h1>
-          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-2">Sindhuja Micro Finance</p>
+          <p className="text-gray-400 font-bold text-[10px] uppercase tracking-[0.3em] mt-2">Sindhuja Finance</p>
         </div>
 
         {/* Form Card */}
