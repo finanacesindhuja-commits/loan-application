@@ -292,9 +292,16 @@ app.post('/api/members', async (req, res) => {
 // Loans
 app.get('/api/loans', cacheMiddleware(10), async (req, res) => {
     try {
-        const { data, error } = await supabase.from('loans').select('*');
+        const { data, error } = await supabase.from('loans').select('*, members(member_no)');
         if (error) throw error;
-        res.json(data || []);
+        
+        // Flatten the member_no into the loan object
+        const formattedData = (data || []).map(loan => ({
+            ...loan,
+            member_no: loan.members?.member_no || null
+        }));
+        
+        res.json(formattedData);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -425,7 +432,6 @@ app.post('/api/loans', upload.fields([
         const loanAppId = `APP-${Math.floor(100000 + Math.random() * 900000)}`;
 
         const dbLoanData = {
-            loan_app_id: loanAppId,
             member_id: req.body.memberId,
             center_id: req.body.centerId,
             member_cibil: req.body.memberCibil,

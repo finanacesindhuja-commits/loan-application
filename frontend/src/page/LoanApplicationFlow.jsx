@@ -230,7 +230,7 @@ export default function LoanApplicationFlow() {
       FD.append("memberName", member.name);
       FD.append("centerId", center.id || center._id);
       FD.append("memberId", member.id || member._id);
-
+      if (member.member_no) FD.append("memberNo", member.member_no);
 
       const res = await axios.post(`${API_URL}/api/loans`, FD, { headers: { "Content-Type": "multipart/form-data" } });
 

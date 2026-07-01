@@ -41,7 +41,7 @@ export default function Tracking() {
 
   const filteredLoans = loans.filter(l => {
     const matchesSearch = l.person_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          l.loan_app_id?.toLowerCase().includes(searchTerm.toLowerCase());
+                          l.member_no?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "ALL" || l.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -80,7 +80,7 @@ export default function Tracking() {
           <div className="flex-1 relative">
             <input 
               type="text" 
-              placeholder="Search by Name or APP ID..."
+              placeholder="Search by Name or Member No..."
               className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-indigo-500/20 font-bold"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -130,7 +130,9 @@ export default function Tracking() {
                      
                      <div className="flex flex-col gap-4">
                         <div className="flex flex-col">
-                           <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">{loan.loan_app_id || "APP-PENDING"}</span>
+                           <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">
+                              {loan.member_no || "NO MEMBER NO"}
+                           </span>
                            <h3 className="text-2xl font-black text-gray-900 tracking-tight group-hover:text-indigo-600 transition-colors uppercase truncate pr-8">{loan.person_name}</h3>
                            <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" /></svg>
