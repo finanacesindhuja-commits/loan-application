@@ -58,39 +58,43 @@ export default function LoanApplicationFlow() {
 
 
 
+  const previousLoanData = JSON.parse(localStorage.getItem("previousLoanData") || "null");
+
   const initialForm = {
-    memberCibil: member?.memberCibil || "",
-    personName: member?.name || "",
-    dateofbirth: member?.dateofbirth || "",
-    gender: member?.gender || "",
-    religion: "",
-    maritalStatus: "",
-    aadharNo: "",
-    memberwork: "",
-    annualIncome: "",
-    nomineeName: "",
-    nomineeDob: "",
-    nomineeGender: "",
-    nomineeReligion: "",
-    nomineeMaritalStatus: "",
-    nomineeRelationship: "",
-    nomineeBusiness: "",
-    mobileNo: "",
-    nomineeMobile: "",
-    memberEmail: "",
-    address: "",
-    pincode: "",
-    houseType: "",
-    memberAadhaarFront: null,
-    memberAadhaarBack: null,
-    nomineeAadhaarFront: null,
-    nomineeAadhaarBack: null,
-    panCard: null,
+    memberCibil: member?.memberCibil || previousLoanData?.member_cibil || "",
+    personName: member?.name || previousLoanData?.person_name || "",
+    dateofbirth: member?.dateofbirth || previousLoanData?.date_of_birth || "",
+    gender: member?.gender || previousLoanData?.gender || "",
+    religion: previousLoanData?.religion || "",
+    maritalStatus: previousLoanData?.marital_status || "",
+    aadharNo: previousLoanData?.aadhar_no || "",
+    memberwork: previousLoanData?.member_work || "",
+    annualIncome: previousLoanData?.annual_income || "",
+    nomineeName: previousLoanData?.nominee_name || "",
+    nomineeDob: previousLoanData?.nominee_dob || "",
+    nomineeGender: previousLoanData?.nominee_gender || "",
+    nomineeReligion: previousLoanData?.nominee_religion || "",
+    nomineeMaritalStatus: previousLoanData?.nominee_marital_status || "",
+    nomineeRelationship: previousLoanData?.nominee_relationship || "",
+    nomineeBusiness: previousLoanData?.nominee_business || "",
+    mobileNo: previousLoanData?.mobile_no || "",
+    nomineeMobile: previousLoanData?.nominee_mobile || "",
+    memberEmail: previousLoanData?.member_email || "",
+    address: previousLoanData?.address || "",
+    pincode: previousLoanData?.pincode || "",
+    houseType: previousLoanData?.house_type || "",
+    // Reusable documents pre-filled from previous loan
+    memberAadhaarFront: previousLoanData?.member_aadhaar_front_url || null,
+    memberAadhaarBack: previousLoanData?.member_aadhaar_back_url || null,
+    nomineeAadhaarFront: previousLoanData?.nominee_aadhaar_front_url || null,
+    nomineeAadhaarBack: previousLoanData?.nominee_aadhaar_back_url || null,
+    panCard: previousLoanData?.pan_card_url || null,
+    passbookImage: previousLoanData?.passbook_image_url || null,
+    // Cycle-specific images (must be newly captured/uploaded)
     formImage: null,
     signature: null,
     memberPhoto: null,
-    passbookImage: null,
-    firstCycleRgNumber: "",
+    firstCycleRgNumber: previousLoanData?.first_cycle_rg_number || "",
   };
 
   const [loanForm, setLoanForm] = useState(initialForm);
@@ -351,6 +355,21 @@ export default function LoanApplicationFlow() {
           {/* STEP 1: Member Info */}
           {currentStep === 1 && (
             <div className="space-y-8 animate-fade-in relative z-10">
+              {previousLoanData && (
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-sm shadow-md shadow-indigo-100">
+                      ✓
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Auto-Filled From Previous Loan</span>
+                      <span className="text-xs font-bold text-gray-700">Member No: {member?.member_no || previousLoanData?.member_no || 'LN-LOADED'}</span>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-black text-indigo-500 bg-white px-3 py-1.5 rounded-xl border border-indigo-100 uppercase tracking-widest">Re-application</span>
+                </div>
+              )}
+
               <div className="flex flex-col gap-1">
                 <h3 className="text-2xl font-black text-gray-900 tracking-tight">Member Details</h3>
                 <p className="text-gray-400 text-sm font-medium">Verify the primary applicant's personal and financial information.</p>
@@ -820,16 +839,23 @@ export default function LoanApplicationFlow() {
 
                       {loanForm[field] ? (
                         <>
-                          <div className="w-8 h-8 md:w-9 md:h-9 bg-emerald-500 text-white rounded-full flex items-center justify-center mb-2 shadow-lg shadow-emerald-200">
+                          <div className={`w-8 h-8 md:w-9 md:h-9 ${typeof loanForm[field] === 'string' ? 'bg-blue-500' : 'bg-emerald-500'} text-white rounded-full flex items-center justify-center mb-2 shadow-lg shadow-emerald-200`}>
                             <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7" /></svg>
                           </div>
                           <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest leading-tight block px-1">{label}</span>
-                          <span className="text-[7px] md:text-[8px] mt-1.5 opacity-50 font-bold">RE-CAPTURE</span>
+                          <span className={`text-[7px] md:text-[8px] mt-1.5 font-bold ${typeof loanForm[field] === 'string' ? 'text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full' : 'text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full'}`}>
+                            {typeof loanForm[field] === 'string' ? 'PRE-FILLED (TAP TO REPLACE)' : 'RE-CAPTURE'}
+                          </span>
                         </>
                       ) : (
                         <>
                           <svg className="w-6 h-6 md:w-7 md:h-7 mb-2.5 opacity-40 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={iconPath} /></svg>
                           <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest leading-tight block px-1">{label}</span>
+                          {["signature", "memberPhoto", "formImage"].includes(field) && (
+                            <span className="text-[7px] md:text-[8px] mt-1 text-rose-500 font-bold bg-rose-50 px-2 py-0.5 rounded-full">
+                              NEW UPLOAD REQUIRED
+                            </span>
+                          )}
                         </>
                       )}
                     </label>

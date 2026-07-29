@@ -289,6 +289,94 @@ app.post('/api/members', async (req, res) => {
     }
 });
 
+// Lookup member profile and latest loan data by member_no or member_id
+app.get('/api/members/lookup/:memberNo', async (req, res) => {
+    try {
+        const { memberNo } = req.params;
+        const cleanNo = memberNo.trim().toUpperCase();
+
+        // 1. Search member by member_no or numeric ID
+        let { data: member, error: memberError } = await supabase
+            .from('members')
+            .select('*')
+            .or(`member_no.ilike.${cleanNo},member_no.ilike.LN-${cleanNo.replace('LN-', '')}`)
+            .maybeSingle();
+
+        if (!member && !isNaN(cleanNo)) {
+            const { data: memberById } = await supabase
+                .from('members')
+                .select('*')
+                .eq('id', Number(cleanNo))
+                .maybeSingle();
+            member = memberById;
+        }
+
+        if (!member) {
+            return res.status(404).json({ error: 'Member not found with this Member No / ID' });
+        }
+
+        let latestLoan = loans && loans.length > 0 ? loans[0] : null;
+
+        // Check collection_schedules in DB: If all collections are completed/closed, mark loan as CLOSED
+        if (latestLoan && latestLoan.status !== 'CLOSED' && latestLoan.status !== 'REJECTED') {
+            const { data: schedules } = await supabase
+                .from('collection_schedules')
+                .select('status, amount, collected_amount')
+                .eq('loan_id', latestLoan.id);
+
+            if (schedules && schedules.length > 0) {
+                const allClosedOrPaid = schedules.every(s => {
+                    const statusUpper = (s.status || '').toUpperCase();
+                    const isClosedStatus = ['CLOSED', 'PAID', 'RECEIVED', 'FINISHED', 'COMPLETED'].includes(statusUpper);
+                    const isFullyCollected = s.amount && s.collected_amount && Number(s.collected_amount) >= Number(s.amount);
+                    return isClosedStatus || isFullyCollected;
+                });
+
+                if (allClosedOrPaid) {
+                    console.log(`DEBUG: All collection_schedules completed for loan ID ${latestLoan.id}. Updating loan status to CLOSED.`);
+                    await supabase
+                        .from('loans')
+                        .update({ status: 'CLOSED' })
+                        .eq('id', latestLoan.id);
+
+                    latestLoan.status = 'CLOSED';
+                }
+            }
+        }
+
+        res.json({
+            member,
+            latestLoan
+        });
+    } catch (err) {
+        console.error('Error looking up member:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Re-assign member to a new center if migrated
+app.post('/api/members/reassign-center', async (req, res) => {
+    try {
+        const { memberId, centerId } = req.body;
+        if (!memberId || !centerId) {
+            return res.status(400).json({ error: 'Missing memberId or centerId' });
+        }
+
+        const { data, error } = await supabase
+            .from('members')
+            .update({ center_id: centerId })
+            .eq('id', memberId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        console.error('Error reassigning member center:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Loans
 app.get('/api/loans', cacheMiddleware(10), async (req, res) => {
     try {
@@ -404,14 +492,15 @@ app.post('/api/loans', upload.fields([
 ]), async (req, res) => {
     console.log('DEBUG: Starting Loan Submission for:', req.body.personName);
     try {
-        // 1. CHECK FOR DUPLICATE LOAN BY AADHAAR
+        // 1. CHECK FOR DUPLICATE LOAN BY AADHAAR (Only block active status)
         const aadharNo = req.body.aadharNo;
         if (aadharNo) {
+            const activeStatuses = ["PENDING", "APPROVED", "DISBURSED", "READY FOR PD", "QUERY", "RESUBMITTED", "CREDITED"];
             const { data: existingLoan, error: checkError } = await supabase
                 .from('loans')
                 .select('id, status, loan_app_id')
                 .eq('aadhar_no', aadharNo)
-                .neq('status', 'REJECTED')
+                .in('status', activeStatuses)
                 .limit(1)
                 .maybeSingle();
 
@@ -471,26 +560,28 @@ app.post('/api/loans', upload.fields([
             'memberPhoto', 'passbookImage'
         ];
 
-        if (req.files) {
-            for (const field of fileFields) {
-                if (req.files[field] && req.files[field][0]) {
-                    const file = req.files[field][0];
-                    console.log(`DEBUG: Uploading file for field: ${field} (${file.size} bytes)`);
+        for (const field of fileFields) {
+            const dbField = field.replace(/([A-Z])/g, "_$1").toLowerCase() + "_url";
+            if (req.files && req.files[field] && req.files[field][0]) {
+                const file = req.files[field][0];
+                console.log(`DEBUG: Uploading file for field: ${field} (${file.size} bytes)`);
 
-                    const fileName = `loans/${Date.now()}-${file.originalname}`;
-                    const { error: uploadError } = await supabase.storage
-                        .from('loan-documents')
-                        .upload(fileName, file.buffer, { contentType: file.mimetype });
+                const fileName = `loans/${Date.now()}-${file.originalname}`;
+                const { error: uploadError } = await supabase.storage
+                    .from('loan-documents')
+                    .upload(fileName, file.buffer, { contentType: file.mimetype });
 
-                    if (uploadError) {
-                        console.error(`❌ Upload Error (${field}):`, uploadError);
-                        throw uploadError;
-                    }
-
-                    const { data: { publicUrl } } = supabase.storage.from('loan-documents').getPublicUrl(fileName);
-                    const dbField = field.replace(/([A-Z])/g, "_$1").toLowerCase() + "_url";
-                    dbLoanData[dbField] = publicUrl;
+                if (uploadError) {
+                    console.error(`❌ Upload Error (${field}):`, uploadError);
+                    throw uploadError;
                 }
+
+                const { data: { publicUrl } } = supabase.storage.from('loan-documents').getPublicUrl(fileName);
+                dbLoanData[dbField] = publicUrl;
+            } else if (req.body[field] && typeof req.body[field] === 'string' && req.body[field].startsWith('http')) {
+                // Re-use pre-existing document URL from previous loan cycle
+                console.log(`DEBUG: Re-using existing document URL for field: ${field}`);
+                dbLoanData[dbField] = req.body[field];
             }
         }
 

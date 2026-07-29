@@ -133,11 +133,81 @@ export default function Members() {
     }
   };
 
+  const [searchNo, setSearchNo] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+
   // Select member
-  const handleAction = (member) => {
+  const handleAction = async (member) => {
     localStorage.setItem("member", JSON.stringify(member));
-    if (!member.loanStatus || member.loanStatus === "REJECTED") {
+    localStorage.removeItem("previousLoanData");
+
+    // Fetch previous loan data if available for auto-fill
+    try {
+      if (member.member_no) {
+        const res = await axios.get(`${API_URL}/api/members/lookup/${member.member_no}`);
+        if (res.data?.latestLoan) {
+          localStorage.setItem("previousLoanData", JSON.stringify(res.data.latestLoan));
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch previous loan data:", err);
+    }
+
+    if (!member.loanStatus || member.loanStatus === "REJECTED" || member.loanStatus === "CLOSED") {
         navigate("/loan-application");
+    }
+  };
+
+  // Search existing member by Member No (Closed Loan / Re-apply across centers)
+  const handleSearchMember = async () => {
+    if (!searchNo.trim()) return;
+    setSearchLoading(true);
+    setSearchError("");
+
+    try {
+      const res = await axios.get(`${API_URL}/api/members/lookup/${searchNo.trim()}`);
+      const { member, latestLoan } = res.data;
+
+      if (!member) {
+        setSearchError("Member No / ID not found");
+        return;
+      }
+
+      // Check active loan status blocking
+      const activeStatuses = ["PENDING", "APPROVED", "DISBURSED", "READY FOR PD", "QUERY", "RESUBMITTED", "CREDITED"];
+      if (latestLoan && activeStatuses.includes(latestLoan.status?.toUpperCase())) {
+        setSearchError(`This member already has an active (${latestLoan.status}) loan application.`);
+        return;
+      }
+
+      // Re-assign member center if they migrated to current center
+      if (centerId && Number(member.center_id) !== Number(centerId)) {
+        await axios.post(`${API_URL}/api/members/reassign-center`, {
+          memberId: member.id,
+          centerId: Number(centerId)
+        });
+        member.center_id = Number(centerId);
+      }
+
+      // Save to local storage for loan application flow
+      localStorage.setItem("member", JSON.stringify(member));
+      if (latestLoan) {
+        localStorage.setItem("previousLoanData", JSON.stringify(latestLoan));
+      } else {
+        localStorage.removeItem("previousLoanData");
+      }
+
+      navigate("/loan-application");
+    } catch (err) {
+      console.error("Member lookup error:", err);
+      if (err.response?.status === 404) {
+        setSearchError("Member No not found. Please check ID or create a new member.");
+      } else {
+        setSearchError("Server error searching member.");
+      }
+    } finally {
+      setSearchLoading(false);
     }
   };
 
@@ -200,9 +270,51 @@ export default function Members() {
 
         <div className="bg-white shadow-xl shadow-gray-200/50 rounded-[2rem] p-6 md:p-8 border border-gray-100 relative">
 
+        {/* Existing Member / Closed Loan Search by Member No */}
+        <div className="mb-8 p-5 bg-gradient-to-br from-indigo-50/70 to-blue-50/40 rounded-3xl border border-indigo-100/80">
+          <div className="flex flex-col gap-1 mb-3">
+            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
+              <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              Re-Apply / Closed Loan Search (Member No)
+            </span>
+            <p className="text-gray-500 text-xs font-medium">Enter existing Member No (e.g., LN-123456) to auto-fill member data.</p>
+          </div>
 
-        {/* Add Member */}
+          <div className="flex flex-col sm:flex-row bg-white p-2 rounded-2xl border border-indigo-100 gap-2 shadow-sm">
+            <input
+              value={searchNo}
+              onChange={(e) => setSearchNo(e.target.value)}
+              placeholder="e.g. LN-123456 or Member ID..."
+              onKeyDown={(e) => e.key === 'Enter' && handleSearchMember()}
+              className="flex-1 p-3 bg-transparent focus:outline-none font-bold text-gray-700 placeholder:text-gray-300 text-sm"
+            />
+            <button
+              onClick={handleSearchMember}
+              disabled={!searchNo.trim() || searchLoading}
+              className={`px-6 py-3.5 rounded-xl text-white font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95 flex items-center justify-center gap-2
+                ${!searchNo.trim() || searchLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200"}
+              `}
+            >
+              {searchLoading ? (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>Fetch & Apply</span>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
+          {searchError && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2.5 ml-2">{searchError}</p>}
+        </div>
+
+        {/* Add New Member */}
         <div className="mb-8">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Add New Member</p>
           <div className="flex flex-col sm:flex-row bg-gray-50 p-2 rounded-2xl border border-gray-100 gap-2 shadow-inner">
             <input
               value={name}
