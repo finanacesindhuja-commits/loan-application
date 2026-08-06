@@ -647,7 +647,6 @@ app.post('/api/loans', upload.fields([
 process.on('uncaughtException', (err) => {
     console.error('🌋 UNCAUGHT EXCEPTION - Server would have crashed!');
     console.error(err);
-    // Optionally restart via PM2/Nodemon by exiting with an error code
     process.exit(1);
 });
 
@@ -657,9 +656,81 @@ app.listen(PORT, () => {
     console.log(`====================================`);
 });
 
-// Heartbeat to keep the event loop alive and debug
-setInterval(() => {
-    // console.log('Ping...');
-}, 60000);
+// ============================================================
+// 🧹 AUTO CLEANUP — CLOSED loans + collection_schedules
+//    Runs once on startup, then every 24 hours
+//    Deletes: loans with status=CLOSED older than 30 days
+//             + their collection_schedules
+// ============================================================
+const autoCleanupClosedLoans = async () => {
+    try {
+        console.log('🧹 CLEANUP: Checking for CLOSED loans older than 30 days...');
+
+        // Date 30 days ago
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const cutoffDate = thirtyDaysAgo.toISOString();
+
+        // 1. Find all CLOSED loans older than 30 days
+        const { data: closedLoans, error: fetchError } = await supabase
+            .from('loans')
+            .select('id, loan_app_id, person_name, created_at')
+            .eq('status', 'CLOSED')
+            .lt('created_at', cutoffDate);
+
+        if (fetchError) {
+            console.error('🧹 CLEANUP ERROR fetching closed loans:', fetchError.message);
+            return;
+        }
+
+        if (!closedLoans || closedLoans.length === 0) {
+            console.log('🧹 CLEANUP: No CLOSED loans older than 30 days found. Nothing to delete.');
+            return;
+        }
+
+        console.log(`🧹 CLEANUP: Found ${closedLoans.length} CLOSED loan(s) to delete.`);
+        const loanIds = closedLoans.map(l => l.id);
+
+        // 2. Delete collection_schedules for these loans first (child records)
+        const { error: scheduleDeleteError } = await supabase
+            .from('collection_schedules')
+            .delete()
+            .in('loan_id', loanIds);
+
+        if (scheduleDeleteError) {
+            console.error('🧹 CLEANUP ERROR deleting collection_schedules:', scheduleDeleteError.message);
+        } else {
+            console.log(`🧹 CLEANUP: Deleted collection_schedules for ${loanIds.length} loan(s).`);
+        }
+
+        // 3. Delete the CLOSED loans themselves
+        const { error: loanDeleteError } = await supabase
+            .from('loans')
+            .delete()
+            .in('id', loanIds);
+
+        if (loanDeleteError) {
+            console.error('🧹 CLEANUP ERROR deleting loans:', loanDeleteError.message);
+        } else {
+            closedLoans.forEach(l => {
+                console.log(`🧹 CLEANUP: Deleted loan ${l.loan_app_id || l.id} (${l.person_name}) — closed on ${l.created_at}`);
+            });
+            console.log(`✅ CLEANUP DONE: ${closedLoans.length} loan(s) and their schedules deleted.`);
+        }
+
+    } catch (err) {
+        console.error('🧹 CLEANUP CRITICAL ERROR:', err.message);
+    }
+};
+
+// Run cleanup once on server startup
+autoCleanupClosedLoans();
+
+// Then run every 24 hours automatically
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+setInterval(autoCleanupClosedLoans, TWENTY_FOUR_HOURS);
+
+// Heartbeat to keep the event loop alive
+setInterval(() => {}, 60000);
 
 console.log('DEBUG: Script execution reached end of server.js');
