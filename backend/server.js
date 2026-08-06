@@ -419,7 +419,11 @@ app.post('/api/members/reassign-center', async (req, res) => {
 // Loans
 app.get('/api/loans', cacheMiddleware(10), async (req, res) => {
     try {
-        const { data, error } = await supabase.from('loans').select('*, members(member_no)');
+        // Order by newest first so member list always shows the LATEST loan status
+        const { data, error } = await supabase
+            .from('loans')
+            .select('*, members(member_no)')
+            .order('created_at', { ascending: false });
         if (error) throw error;
         
         // Flatten the member_no into the loan object
