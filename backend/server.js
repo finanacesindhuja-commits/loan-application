@@ -267,17 +267,8 @@ app.post('/api/centers/:centerId/hide', async (req, res) => {
 });
 
 // Members
-app.get('/api/members/:centerId', async (req, res) => {
-    try {
-        const { centerId } = req.params;
-        const { data, error } = await supabase.from('members').select('*').eq('center_id', centerId).order('name');
-        if (error) throw error;
-        res.json(data || []);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
+// ⚠️ IMPORTANT: /api/members/lookup/:memberNo MUST come before /api/members/:centerId
+// Otherwise Express will treat 'lookup' as a centerId value.
 app.post('/api/members', async (req, res) => {
     try {
         const { name, centerId, memberNo } = req.body;
@@ -294,30 +285,71 @@ app.get('/api/members/lookup/:memberNo', async (req, res) => {
     try {
         const { memberNo } = req.params;
         const cleanNo = memberNo.trim().toUpperCase();
+        console.log(`DEBUG: Looking up member with input: "${cleanNo}"`);
 
-        // 1. Search member by member_no or numeric ID
-        let { data: member, error: memberError } = await supabase
+        let member = null;
+
+        // Strategy 1: Exact match on member_no (e.g. "LN-998379")
+        const { data: m1 } = await supabase
             .from('members')
             .select('*')
-            .or(`member_no.ilike.${cleanNo},member_no.ilike.LN-${cleanNo.replace('LN-', '')}`)
+            .eq('member_no', cleanNo)
             .maybeSingle();
+        member = m1;
 
+        // Strategy 2: Try adding "LN-" prefix if not already present
+        if (!member && !cleanNo.startsWith('LN-')) {
+            const { data: m2 } = await supabase
+                .from('members')
+                .select('*')
+                .eq('member_no', `LN-${cleanNo}`)
+                .maybeSingle();
+            member = m2;
+        }
+
+        // Strategy 3: Try stripping "LN-" prefix and matching just the number part
+        if (!member && cleanNo.startsWith('LN-')) {
+            const numericPart = cleanNo.replace('LN-', '');
+            const { data: m3 } = await supabase
+                .from('members')
+                .select('*')
+                .eq('member_no', numericPart)
+                .maybeSingle();
+            member = m3;
+        }
+
+        // Strategy 4: Fallback — search by numeric DB row id
         if (!member && !isNaN(cleanNo)) {
-            const { data: memberById } = await supabase
+            const { data: m4 } = await supabase
                 .from('members')
                 .select('*')
                 .eq('id', Number(cleanNo))
                 .maybeSingle();
-            member = memberById;
+            member = m4;
         }
+
+        console.log(`DEBUG: Member found: ${member ? `ID=${member.id}, member_no=${member.member_no}` : 'NOT FOUND'}`);
 
         if (!member) {
             return res.status(404).json({ error: 'Member not found with this Member No / ID' });
         }
 
+        // 2. Fetch all loans for this member, sorted newest first
+        const { data: loans, error: loansError } = await supabase
+            .from('loans')
+            .select('*')
+            .eq('member_id', member.id)
+            .order('created_at', { ascending: false });
+
+        if (loansError) {
+            console.error('Error fetching loans for member:', loansError);
+        }
+
+        console.log(`DEBUG: Found ${loans?.length || 0} loan(s) for member ID ${member.id}`);
+
         let latestLoan = loans && loans.length > 0 ? loans[0] : null;
 
-        // Check collection_schedules in DB: If all collections are completed/closed, mark loan as CLOSED
+        // 3. Auto-close loan if all collection_schedules are done
         if (latestLoan && latestLoan.status !== 'CLOSED' && latestLoan.status !== 'REJECTED') {
             const { data: schedules } = await supabase
                 .from('collection_schedules')
@@ -333,23 +365,30 @@ app.get('/api/members/lookup/:memberNo', async (req, res) => {
                 });
 
                 if (allClosedOrPaid) {
-                    console.log(`DEBUG: All collection_schedules completed for loan ID ${latestLoan.id}. Updating loan status to CLOSED.`);
-                    await supabase
-                        .from('loans')
-                        .update({ status: 'CLOSED' })
-                        .eq('id', latestLoan.id);
-
+                    console.log(`DEBUG: All collection_schedules done for loan ID ${latestLoan.id}. Auto-closing.`);
+                    await supabase.from('loans').update({ status: 'CLOSED' }).eq('id', latestLoan.id);
                     latestLoan.status = 'CLOSED';
                 }
             }
         }
 
-        res.json({
-            member,
-            latestLoan
-        });
+        console.log(`DEBUG: Latest loan status: ${latestLoan?.status || 'NO LOAN'}`);
+
+        res.json({ member, latestLoan });
     } catch (err) {
-        console.error('Error looking up member:', err);
+        console.error('❌ Error looking up member:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get all members for a center (must be after /lookup route)
+app.get('/api/members/:centerId', async (req, res) => {
+    try {
+        const { centerId } = req.params;
+        const { data, error } = await supabase.from('members').select('*').eq('center_id', centerId).order('name');
+        if (error) throw error;
+        res.json(data || []);
+    } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
