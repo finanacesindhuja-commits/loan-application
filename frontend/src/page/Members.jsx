@@ -154,7 +154,7 @@ export default function Members() {
       console.warn("Could not fetch previous loan data:", err);
     }
 
-    if (!member.loanStatus || member.loanStatus === "REJECTED" || member.loanStatus === "CLOSED") {
+    if (!member.loanStatus || member.loanStatus === "REJECTED" || member.loanStatus === "CLOSED" || member.loanStatus === "ARCHIVED") {
         navigate("/loan-application");
     }
   };
@@ -362,12 +362,12 @@ export default function Members() {
                   </div>
 
                   <button
-                    disabled={member.loanStatus && member.loanStatus !== "REJECTED" && member.loanStatus !== "CLOSED"}
+                    disabled={member.loanStatus && member.loanStatus !== "REJECTED" && member.loanStatus !== "CLOSED" && member.loanStatus !== "ARCHIVED"}
                     onClick={() => handleAction(member)}
                     className={`w-full sm:min-w-[120px] py-3 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm active:scale-95 ${
                       !member.loanStatus || member.loanStatus === "REJECTED"
                         ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
-                        : member.loanStatus === "CLOSED"
+                        : (member.loanStatus === "CLOSED" || member.loanStatus === "ARCHIVED")
                         ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
                         : member.loanStatus === "PENDING"
                         ? "bg-amber-50 text-amber-600 border border-amber-100 cursor-not-allowed shadow-none"
@@ -383,7 +383,7 @@ export default function Members() {
                         Apply
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
                       </span>
-                    ) : member.loanStatus === "CLOSED" ? (
+                    ) : (member.loanStatus === "CLOSED" || member.loanStatus === "ARCHIVED") ? (
                       <span className="flex items-center justify-center gap-2">
                         ✓ Re-Apply
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>

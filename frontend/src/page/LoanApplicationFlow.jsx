@@ -10,7 +10,10 @@ export default function LoanApplicationFlow() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(() => {
+    const draftStep = localStorage.getItem(`loan_draft_step_${member?.id}`);
+    return draftStep ? parseInt(draftStep, 10) : 1;
+  });
 
   useEffect(() => {
     // Block if member already has an active loan (anything EXCEPT Rejected or Closed counts as active)
@@ -59,6 +62,7 @@ export default function LoanApplicationFlow() {
 
 
   const previousLoanData = JSON.parse(localStorage.getItem("previousLoanData") || "null");
+  const savedDraft = JSON.parse(localStorage.getItem(`loan_draft_form_${member?.id}`) || "null");
 
   const initialForm = {
     memberCibil: member?.memberCibil || previousLoanData?.member_cibil || "",
@@ -97,7 +101,30 @@ export default function LoanApplicationFlow() {
     firstCycleRgNumber: previousLoanData?.first_cycle_rg_number || "",
   };
 
-  const [loanForm, setLoanForm] = useState(initialForm);
+  const [loanForm, setLoanForm] = useState(() => {
+    if (savedDraft) {
+      return { ...initialForm, ...savedDraft };
+    }
+    return initialForm;
+  });
+
+  // Auto-save draft on form change or step change
+  useEffect(() => {
+    if (!member?.id) return;
+    
+    // Create a copy of the form without File objects (since they can't be JSON stringified properly)
+    const formToSave = { ...loanForm };
+    const fileFields = ["formImage", "signature", "memberPhoto", "memberAadhaarFront", "memberAadhaarBack", "nomineeAadhaarFront", "nomineeAadhaarBack", "panCard", "passbookImage"];
+    fileFields.forEach(field => {
+      // Only keep it in draft if it's a string URL (from previous loan data), otherwise delete the File object
+      if (formToSave[field] && typeof formToSave[field] !== 'string') {
+        delete formToSave[field];
+      }
+    });
+
+    localStorage.setItem(`loan_draft_form_${member.id}`, JSON.stringify(formToSave));
+    localStorage.setItem(`loan_draft_step_${member.id}`, currentStep.toString());
+  }, [loanForm, currentStep, member]);
 
   if (!center || !member) {
     return (
@@ -241,14 +268,16 @@ export default function LoanApplicationFlow() {
       setPopupLoading(false);
       setPopupSuccess(true);
 
+      // Clear the saved draft
+      localStorage.removeItem(`loan_draft_form_${member.id}`);
+      localStorage.removeItem(`loan_draft_step_${member.id}`);
+
       setTimeout(() => {
         setShowPopup(false);
         setPopupSuccess(false);
         setLoanForm(initialForm);
         setCurrentStep(1);
         navigate("/members", { replace: true });
-        // The success message is already in the popup, so alert is redundant but I'll leave it for now
-        // if the user prefers confirm feedback.
       }, 3000);
     } catch (err) {
       const errorMsg = err?.response?.data?.message || err.message;
