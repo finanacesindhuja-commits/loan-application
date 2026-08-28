@@ -297,7 +297,7 @@ app.get('/api/members/lookup/:memberNo', async (req, res) => {
             .maybeSingle();
         member = m1;
 
-        // Strategy 2: Try adding "LN-" prefix if not already present
+        // Strategy 2: Try adding "LN-" prefix if not already present (e.g. "998379" -> "LN-998379")
         if (!member && !cleanNo.startsWith('LN-')) {
             const { data: m2 } = await supabase
                 .from('members')
@@ -326,6 +326,23 @@ app.get('/api/members/lookup/:memberNo', async (req, res) => {
                 .eq('id', Number(cleanNo))
                 .maybeSingle();
             member = m4;
+        }
+
+        // Strategy 5: Fallback — search by Loan App ID (e.g. APP-XXXXXX or XXXXXX)
+        if (!member) {
+            const { data: loanByAppId } = await supabase
+                .from('loans')
+                .select('member_id')
+                .or(`loan_app_id.eq.${cleanNo},loan_app_id.eq.APP-${cleanNo}`)
+                .maybeSingle();
+            if (loanByAppId?.member_id) {
+                const { data: m5 } = await supabase
+                    .from('members')
+                    .select('*')
+                    .eq('id', loanByAppId.member_id)
+                    .maybeSingle();
+                member = m5;
+            }
         }
 
         console.log(`DEBUG: Member found: ${member ? `ID=${member.id}, member_no=${member.member_no}` : 'NOT FOUND'}`);

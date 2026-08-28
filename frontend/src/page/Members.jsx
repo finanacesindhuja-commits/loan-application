@@ -86,10 +86,15 @@ export default function Members() {
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(" ");
 
-  // Input change
+  // Input change - Alphabetic only
   const handleNameChange = (e) => {
-    const value = e.target.value;
+    const value = e.target.value.replace(/[^a-zA-Z\s]/g, "");
     setName(value);
+
+    if (!value.trim()) {
+      setNameError("");
+      return;
+    }
 
     const formatted = capitalizeName(value);
     const exists = members.some((m) => capitalizeName(m.name) === formatted);
@@ -98,11 +103,12 @@ export default function Members() {
 
   // Add member
   const addMember = async () => {
-    if (!name.trim() || nameError) return;
+    const cleanName = name.replace(/[^a-zA-Z\s]/g, "").trim();
+    if (!cleanName || nameError) return;
 
     setAddLoading(true);
     try {
-      const formattedName = capitalizeName(name);
+      const formattedName = capitalizeName(cleanName);
       const memberNo = `LN-${Math.floor(Math.random() * 900000) + 100000}`;
 
       if (!center?.id) {
@@ -136,6 +142,13 @@ export default function Members() {
   const [searchNo, setSearchNo] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
+
+  // Search input change - Numeric only
+  const handleSearchChange = (e) => {
+    const numericValue = e.target.value.replace(/\D/g, "");
+    setSearchNo(numericValue);
+    if (searchError) setSearchError("");
+  };
 
   // Select member
   const handleAction = async (member) => {
@@ -279,17 +292,25 @@ export default function Members() {
               </svg>
               Re-Apply / Closed Loan Search (Member No)
             </span>
-            <p className="text-gray-500 text-xs font-medium">Enter existing Member No (e.g., LN-123456) to auto-fill member data.</p>
+            <p className="text-gray-500 text-xs font-medium">Enter Member No (numeric digits only) to auto-fill member data.</p>
           </div>
 
           <div className="flex flex-col sm:flex-row bg-white p-2 rounded-2xl border border-indigo-100 gap-2 shadow-sm">
-            <input
-              value={searchNo}
-              onChange={(e) => setSearchNo(e.target.value)}
-              placeholder="e.g. LN-123456 or Member ID..."
-              onKeyDown={(e) => e.key === 'Enter' && handleSearchMember()}
-              className="flex-1 p-3 bg-transparent focus:outline-none font-bold text-gray-700 placeholder:text-gray-300 text-sm"
-            />
+            <div className="flex-1 flex items-center bg-gray-50/80 rounded-xl px-3 border border-transparent focus-within:border-indigo-400 focus-within:bg-white transition-all">
+              <span className="text-indigo-600 font-black text-xs px-2.5 py-1 bg-indigo-50 rounded-lg mr-2 select-none border border-indigo-100">
+                LN -
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={searchNo}
+                onChange={handleSearchChange}
+                placeholder="Enter numbers only (e.g. 123456)..."
+                onKeyDown={(e) => e.key === 'Enter' && handleSearchMember()}
+                className="flex-1 py-3 bg-transparent focus:outline-none font-bold text-gray-700 placeholder:text-gray-300 text-sm"
+              />
+            </div>
             <button
               onClick={handleSearchMember}
               disabled={!searchNo.trim() || searchLoading}
@@ -317,16 +338,18 @@ export default function Members() {
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">Add New Member</p>
           <div className="flex flex-col sm:flex-row bg-gray-50 p-2 rounded-2xl border border-gray-100 gap-2 shadow-inner">
             <input
+              type="text"
               value={name}
               onChange={handleNameChange}
-              placeholder="Enter new member name..."
+              placeholder="Enter new member name (Alphabets only)..."
+              onKeyDown={(e) => e.key === 'Enter' && addMember()}
               className={`flex-1 p-4 bg-transparent focus:outline-none font-bold text-gray-700 placeholder:text-gray-300 ${nameError ? "text-red-500" : ""}`}
             />
             <button
               onClick={addMember}
               disabled={!name.trim() || !!nameError || addLoading}
               className={`px-8 py-4 sm:py-0 rounded-xl text-white font-black text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2
-                ${nameError || addLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200"}
+                ${!name.trim() || nameError || addLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200"}
               `}
             >
               {addLoading ? (
