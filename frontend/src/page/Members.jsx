@@ -152,13 +152,17 @@ export default function Members() {
 
   // Select member
   const handleAction = async (member) => {
-    localStorage.setItem("member", JSON.stringify(member));
+    const currentMember = { ...member };
+    if (currentMember.member_no && !currentMember.member_no.startsWith("LN-")) {
+      currentMember.member_no = `LN-${currentMember.member_no}`;
+    }
+    localStorage.setItem("member", JSON.stringify(currentMember));
     localStorage.removeItem("previousLoanData");
 
     // Fetch previous loan data if available for auto-fill
     try {
-      if (member.member_no) {
-        const res = await axios.get(`${API_URL}/api/members/lookup/${member.member_no}`);
+      if (currentMember.member_no) {
+        const res = await axios.get(`${API_URL}/api/members/lookup/${currentMember.member_no}`);
         if (res.data?.latestLoan) {
           localStorage.setItem("previousLoanData", JSON.stringify(res.data.latestLoan));
         }
@@ -174,17 +178,25 @@ export default function Members() {
 
   // Search existing member by Member No (Closed Loan / Re-apply across centers)
   const handleSearchMember = async () => {
-    if (!searchNo.trim()) return;
+    const cleanNo = searchNo.replace(/\D/g, "").trim();
+    if (!cleanNo) return;
     setSearchLoading(true);
     setSearchError("");
 
     try {
-      const res = await axios.get(`${API_URL}/api/members/lookup/${searchNo.trim()}`);
+      const res = await axios.get(`${API_URL}/api/members/lookup/${cleanNo}`);
       const { member, latestLoan } = res.data;
 
       if (!member) {
         setSearchError("Member No / ID not found");
         return;
+      }
+
+      // Format member_no with LN- prefix if not present
+      if (!member.member_no) {
+        member.member_no = `LN-${cleanNo}`;
+      } else if (!member.member_no.startsWith("LN-")) {
+        member.member_no = `LN-${member.member_no}`;
       }
 
       // Check active loan status blocking

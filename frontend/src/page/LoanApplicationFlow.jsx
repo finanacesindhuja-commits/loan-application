@@ -64,7 +64,11 @@ export default function LoanApplicationFlow() {
   const previousLoanData = JSON.parse(localStorage.getItem("previousLoanData") || "null");
   const savedDraft = JSON.parse(localStorage.getItem(`loan_draft_form_${member?.id}`) || "null");
 
+  const rawMemberNo = member?.member_no || previousLoanData?.member_no || (member?.id ? `LN-${member.id}` : "");
+  const formattedMemberNo = rawMemberNo ? (rawMemberNo.startsWith("LN-") ? rawMemberNo : `LN-${rawMemberNo}`) : "";
+
   const initialForm = {
+    memberNo: formattedMemberNo,
     memberCibil: member?.memberCibil || previousLoanData?.member_cibil || "",
     personName: member?.name || previousLoanData?.person_name || "",
     dateofbirth: member?.dateofbirth || previousLoanData?.date_of_birth || "",
@@ -261,7 +265,8 @@ export default function LoanApplicationFlow() {
       FD.append("memberName", member.name);
       FD.append("centerId", center.id || center._id);
       FD.append("memberId", member.id || member._id);
-      if (member.member_no) FD.append("memberNo", member.member_no);
+      const memberNumber = loanForm.memberNo || formattedMemberNo || member.member_no;
+      if (memberNumber) FD.append("memberNo", memberNumber);
 
       const res = await axios.post(`${API_URL}/api/loans`, FD, { headers: { "Content-Type": "multipart/form-data" } });
 
@@ -331,6 +336,11 @@ export default function LoanApplicationFlow() {
               <div className="flex flex-col">
                 <span className="text-[8px] font-black text-gray-400 uppercase tracking-normal md:tracking-widest leading-none mb-0.5">Applying For</span>
                 <span className="text-sm md:text-base font-black text-gray-900 tracking-tight">{member.name}</span>
+                {(loanForm.memberNo || formattedMemberNo) && (
+                  <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md w-max mt-0.5 tracking-wider">
+                    {loanForm.memberNo || formattedMemberNo}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -392,7 +402,7 @@ export default function LoanApplicationFlow() {
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Auto-Filled From Previous Loan</span>
-                      <span className="text-xs font-bold text-gray-700">Member No: {member?.member_no || previousLoanData?.member_no || 'LN-LOADED'}</span>
+                      <span className="text-xs font-bold text-gray-700">Member No: {member?.member_no || previousLoanData?.member_no || formattedMemberNo || 'LN-LOADED'}</span>
                     </div>
                   </div>
                   <span className="text-[9px] font-black text-indigo-500 bg-white px-3 py-1.5 rounded-xl border border-indigo-100 uppercase tracking-widest">Re-application</span>
@@ -406,7 +416,7 @@ export default function LoanApplicationFlow() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Full Name */}
-                <div className="md:col-span-2">
+                <div>
                   <label className={`${labelStyle} text-indigo-600 font-black`}>Full Name (As per Aadhaar)</label>
                   <input
                     type="text"
@@ -420,6 +430,18 @@ export default function LoanApplicationFlow() {
                   {errors.personName && (
                     <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2 ml-1">{errors.personName}</p>
                   )}
+                </div>
+
+                {/* Member No */}
+                <div>
+                  <label className={`${labelStyle} text-indigo-600 font-black`}>Member No (LN Number)</label>
+                  <input
+                    type="text"
+                    name="memberNo"
+                    value={loanForm.memberNo || formattedMemberNo || ""}
+                    readOnly
+                    className={`${inputStyle} bg-indigo-50/20 border-indigo-100 text-indigo-700 font-black cursor-not-allowed`}
+                  />
                 </div>
 
                 {/* Member CIBIL */}
