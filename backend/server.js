@@ -280,6 +280,31 @@ app.post('/api/members', async (req, res) => {
     }
 });
 
+// Delete a member (and any associated loans/collection schedules)
+app.delete('/api/members/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`DELETE: Removing member id ${id}...`);
+
+        // 1. Find all loans for this member to delete collection schedules
+        const { data: loans } = await supabase.from('loans').select('id').eq('member_id', id);
+        if (loans && loans.length > 0) {
+            const loanIds = loans.map(l => l.id);
+            await supabase.from('collection_schedules').delete().in('loan_id', loanIds);
+            await supabase.from('loans').delete().eq('member_id', id);
+        }
+
+        // 2. Delete the member
+        const { error } = await supabase.from('members').delete().eq('id', id);
+        if (error) throw error;
+
+        res.json({ success: true, message: 'Member deleted successfully' });
+    } catch (err) {
+        console.error('Error deleting member:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Lookup member profile and latest loan data by member_no or member_id
 app.get('/api/members/lookup/:memberNo', async (req, res) => {
     try {

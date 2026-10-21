@@ -11,6 +11,7 @@ export default function Members() {
   const [nameError, setNameError] = useState("");
   const [loading, setLoading] = useState(true);
   const [addLoading, setAddLoading] = useState(false); // ✅ Add button loading
+  const [deletingId, setDeletingId] = useState(null); // ✅ Delete member loading
   const [error, setError] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5005";
@@ -136,6 +137,22 @@ export default function Members() {
       alert("Server error");
     } finally {
       setAddLoading(false);
+    }
+  };
+
+  // Delete member
+  const handleDeleteMember = async (memberId, memberName) => {
+    if (!window.confirm(`Are you sure you want to delete member "${memberName}"?`)) return;
+
+    setDeletingId(memberId);
+    try {
+      await axios.delete(`${API_URL}/api/members/${memberId}`);
+      setMembers((prev) => prev.filter((m) => m.id !== memberId));
+    } catch (err) {
+      console.error("Error deleting member:", err);
+      alert(err.response?.data?.error || "Failed to delete member. Please try again.");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -396,35 +413,53 @@ export default function Members() {
                     )}
                   </div>
 
-                  <button
-                    disabled={member.loanStatus && member.loanStatus !== "REJECTED" && member.loanStatus !== "CLOSED" && member.loanStatus !== "ARCHIVED"}
-                    onClick={() => handleAction(member)}
-                    className={`w-full sm:min-w-[120px] py-3 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm active:scale-95 ${
-                      !member.loanStatus || member.loanStatus === "REJECTED"
-                        ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
-                        : (member.loanStatus === "CLOSED" || member.loanStatus === "ARCHIVED")
-                        ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
-                        : member.loanStatus === "PENDING"
-                        ? "bg-amber-50 text-amber-600 border border-amber-100 cursor-not-allowed shadow-none"
-                        : member.loanStatus === "APPROVED"
-                        ? "bg-emerald-50 text-emerald-600 border border-emerald-100 cursor-not-allowed shadow-none"
-                        : member.loanStatus === "CREDITED"
-                        ? "bg-violet-50 text-violet-600 border border-violet-100 cursor-not-allowed shadow-none"
-                        : "bg-rose-50 text-rose-600 border border-rose-100 cursor-not-allowed shadow-none"
-                    }`}
-                  >
-                    {!member.loanStatus || member.loanStatus === "REJECTED" ? (
-                      <span className="flex items-center justify-center gap-2">
-                        Apply
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
-                      </span>
-                    ) : (member.loanStatus === "CLOSED" || member.loanStatus === "ARCHIVED") ? (
-                      <span className="flex items-center justify-center gap-2">
-                        ✓ Re-Apply
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
-                      </span>
-                    ) : member.loanStatus}
-                  </button>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      disabled={member.loanStatus && member.loanStatus !== "REJECTED" && member.loanStatus !== "CLOSED" && member.loanStatus !== "ARCHIVED"}
+                      onClick={() => handleAction(member)}
+                      className={`flex-1 sm:min-w-[120px] py-3 px-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-sm active:scale-95 ${
+                        !member.loanStatus || member.loanStatus === "REJECTED"
+                          ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100"
+                          : (member.loanStatus === "CLOSED" || member.loanStatus === "ARCHIVED")
+                          ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
+                          : member.loanStatus === "PENDING"
+                          ? "bg-amber-50 text-amber-600 border border-amber-100 cursor-not-allowed shadow-none"
+                          : member.loanStatus === "APPROVED"
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100 cursor-not-allowed shadow-none"
+                          : member.loanStatus === "CREDITED"
+                          ? "bg-violet-50 text-violet-600 border border-violet-100 cursor-not-allowed shadow-none"
+                          : "bg-rose-50 text-rose-600 border border-rose-100 cursor-not-allowed shadow-none"
+                      }`}
+                    >
+                      {!member.loanStatus || member.loanStatus === "REJECTED" ? (
+                        <span className="flex items-center justify-center gap-2">
+                          Apply
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+                        </span>
+                      ) : (member.loanStatus === "CLOSED" || member.loanStatus === "ARCHIVED") ? (
+                        <span className="flex items-center justify-center gap-2">
+                          ✓ Re-Apply
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+                        </span>
+                      ) : member.loanStatus}
+                    </button>
+
+                    {/* Delete Member Button */}
+                    <button
+                      onClick={() => handleDeleteMember(member.id, member.name)}
+                      disabled={deletingId === member.id}
+                      title="Delete Member"
+                      className="p-3 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-gray-100 hover:border-rose-200 active:scale-95 flex items-center justify-center shrink-0"
+                    >
+                      {deletingId === member.id ? (
+                        <span className="w-4 h-4 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
