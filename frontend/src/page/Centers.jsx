@@ -87,10 +87,10 @@ export default function Centers() {
     if (!name.trim()) return;
     if (!staffId) return alert("Session expired. Please login again.");
     
-    const formattedName = capitalize(name.trim());
+    const formattedName = name.trim().toUpperCase();
 
     const exists = centers.some(
-      (c) => c.name.toLowerCase() === formattedName.toLowerCase()
+      (c) => c.name?.toUpperCase() === formattedName
     );
 
     if (exists) {
@@ -132,7 +132,7 @@ export default function Centers() {
       "center",
       JSON.stringify({
         id: Number(center.id),
-        name: center.name,
+        name: center.name ? center.name.toUpperCase() : "",
       })
     );
     navigate("/members");
@@ -268,10 +268,11 @@ export default function Centers() {
               placeholder="Type new center name here..."
               value={name}
               onChange={(e) => {
-                setName(e.target.value);
+                setName(e.target.value.toUpperCase());
                 setError("");
               }}
-              className="flex-1 p-4 bg-transparent focus:outline-none font-bold text-gray-700 placeholder:text-gray-300"
+              onKeyDown={(e) => e.key === 'Enter' && addCenter()}
+              className="flex-1 p-4 bg-transparent focus:outline-none font-bold text-gray-700 placeholder:text-gray-300 uppercase"
             />
             <button
               onClick={addCenter}
@@ -313,7 +314,7 @@ export default function Centers() {
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex flex-col">
-                        <span className="font-black text-gray-900 text-xl tracking-tight group-hover:text-indigo-600 transition-colors uppercase truncate max-w-[150px]">{capitalize(c.name)}</span>
+                        <span className="font-black text-gray-900 text-xl tracking-tight group-hover:text-indigo-600 transition-colors uppercase truncate max-w-[150px]">{c.name?.toUpperCase()}</span>
                         <span className="text-[10px] font-black text-gray-400 mt-1 tracking-widest uppercase flex items-center gap-1">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                           ID: {staffId}
