@@ -335,7 +335,7 @@ export default function Members() {
                 pattern="[0-9]*"
                 value={searchNo}
                 onChange={handleSearchChange}
-                placeholder="Enter numbers only (e.g. 123456)..."
+                placeholder="numbers only (e.g. 123456)"
                 onKeyDown={(e) => e.key === 'Enter' && handleSearchMember()}
                 className="flex-1 py-3 bg-transparent focus:outline-none font-bold text-gray-700 placeholder:text-gray-300 text-sm"
               />
