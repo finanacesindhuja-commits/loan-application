@@ -313,20 +313,32 @@ export default function Members() {
         <div className="bg-white shadow-xl shadow-gray-200/50 rounded-[2rem] p-6 md:p-8 border border-gray-100 relative">
 
         {/* Existing Member / Closed Loan Search by Member No */}
-        <div className="mb-8 p-5 bg-gradient-to-br from-indigo-50/70 to-blue-50/40 rounded-3xl border border-indigo-100/80">
-          <div className="flex flex-col gap-1 mb-3">
-            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-2">
-              <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              Re-Apply / Closed Loan Search (Member No)
-            </span>
-            <p className="text-gray-500 text-xs font-medium">Enter Member No (numeric digits only) to auto-fill member data.</p>
+        <div className="mb-8 p-4 sm:p-6 bg-gradient-to-br from-indigo-50/90 via-white to-sky-50/50 rounded-[1.75rem] border border-indigo-100 shadow-sm relative overflow-hidden">
+          {/* Subtle background glow */}
+          <div className="absolute -top-10 -right-10 w-28 h-28 bg-indigo-200/30 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3.5 relative z-10">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-200 shrink-0">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-black text-gray-900 tracking-tight">Re-Apply Loan</h3>
+                  <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                    Existing Member
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 font-medium">Enter LN number to auto-fill previous loan data</p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row bg-white p-2 rounded-2xl border border-indigo-100 gap-2 shadow-sm">
-            <div className="flex-1 flex items-center bg-gray-50/80 rounded-xl px-3 border border-transparent focus-within:border-indigo-400 focus-within:bg-white transition-all">
-              <span className="text-indigo-600 font-black text-xs px-2.5 py-1 bg-indigo-50 rounded-lg mr-2 select-none border border-indigo-100">
+          <div className="flex flex-col sm:flex-row bg-white p-2 rounded-2xl border border-indigo-100/90 shadow-sm gap-2 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-300 transition-all relative z-10">
+            <div className="flex-1 flex items-center bg-gray-50/80 rounded-xl px-3 py-1 border border-transparent focus-within:bg-white focus-within:border-indigo-200 transition-all min-w-0">
+              <span className="text-indigo-600 font-black text-xs px-2.5 py-1.5 bg-indigo-50 rounded-lg mr-2 select-none border border-indigo-100/80 shrink-0">
                 LN -
               </span>
               <input
@@ -335,15 +347,28 @@ export default function Members() {
                 pattern="[0-9]*"
                 value={searchNo}
                 onChange={handleSearchChange}
-                placeholder="numbers only (e.g. 123456)"
+                placeholder="e.g. 123456"
                 onKeyDown={(e) => e.key === 'Enter' && handleSearchMember()}
-                className="flex-1 py-3 bg-transparent focus:outline-none font-bold text-gray-700 placeholder:text-gray-300 text-sm"
+                className="flex-1 py-2.5 bg-transparent focus:outline-none font-bold text-gray-800 placeholder:text-gray-300 text-sm tracking-wide min-w-0"
               />
+              {searchNo && (
+                <button
+                  type="button"
+                  onClick={() => setSearchNo("")}
+                  className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition shrink-0"
+                  title="Clear"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
+
             <button
               onClick={handleSearchMember}
               disabled={!searchNo.trim() || searchLoading}
-              className={`px-6 py-3.5 rounded-xl text-white font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95 flex items-center justify-center gap-2
+              className={`w-full sm:w-auto px-6 py-3 rounded-xl text-white font-black text-xs uppercase tracking-widest transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 shrink-0
                 ${!searchNo.trim() || searchLoading ? "bg-gray-200 text-gray-400 cursor-not-allowed shadow-none" : "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200"}
               `}
             >
@@ -359,7 +384,15 @@ export default function Members() {
               )}
             </button>
           </div>
-          {searchError && <p className="text-rose-500 text-[10px] font-bold uppercase tracking-widest mt-2.5 ml-2">{searchError}</p>}
+
+          {searchError && (
+            <div className="mt-3 p-3 bg-rose-50 border border-rose-200/80 rounded-xl text-rose-600 text-xs font-bold flex items-center gap-2 animate-pulse relative z-10">
+              <svg className="w-4 h-4 shrink-0 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{searchError}</span>
+            </div>
+          )}
         </div>
 
         {/* Add New Member */}
