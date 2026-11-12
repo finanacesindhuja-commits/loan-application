@@ -127,7 +127,7 @@ app.post('/staff/login', async (req, res) => {
 });
 
 // Centers
-app.get('/api/centers', cacheMiddleware(10), async (req, res) => {
+app.get('/api/centers', cacheMiddleware(60), async (req, res) => {
     console.log('DEBUG: Hitting GET /api/centers');
     try {
         let { staffId } = req.query;
@@ -147,12 +147,15 @@ app.get('/api/centers', cacheMiddleware(10), async (req, res) => {
         }
 
         const centerIds = data?.map(c => c.id) || [];
+        if (centerIds.length === 0) {
+            return res.json([]);
+        }
         
-        // Fetch all members for these centers
-        const { data: members } = await supabase.from('members').select('id, center_id').in('center_id', centerIds);
-        
-        // Fetch all loans for these centers
-        const { data: loans } = await supabase.from('loans').select('id, center_id, member_id, status').in('center_id', centerIds);
+        // Fetch members and loans for these centers in parallel
+        const [{ data: members }, { data: loans }] = await Promise.all([
+            supabase.from('members').select('id, center_id').in('center_id', centerIds),
+            supabase.from('loans').select('id, center_id, member_id, status').in('center_id', centerIds)
+        ]);
         
         const enrichedData = data?.map(center => {
             const centerMembers = (members || []).filter(m => m.center_id === center.id);
@@ -459,13 +462,27 @@ app.post('/api/members/reassign-center', async (req, res) => {
 });
 
 // Loans
-app.get('/api/loans', cacheMiddleware(10), async (req, res) => {
+app.get('/api/loans', cacheMiddleware(60), async (req, res) => {
     try {
+        const { centerId, staffId, summary } = req.query;
+        const selectFields = summary === 'true'
+            ? 'id, member_id, center_id, staff_id, person_name, center_name, status, loan_app_id, created_at, members(member_no)'
+            : '*, members(member_no)';
+
         // Order by newest first so member list always shows the LATEST loan status
-        const { data, error } = await supabase
+        let query = supabase
             .from('loans')
-            .select('*, members(member_no)')
+            .select(selectFields)
             .order('created_at', { ascending: false });
+
+        if (centerId) {
+            query = query.eq('center_id', centerId);
+        }
+        if (staffId) {
+            query = query.eq('staff_id', staffId.toUpperCase());
+        }
+
+        const { data, error } = await query;
         if (error) throw error;
         
         // Flatten the member_no into the loan object
@@ -481,7 +498,7 @@ app.get('/api/loans', cacheMiddleware(10), async (req, res) => {
 });
 
 // GET loans with 'Query' status for a specific staff member
-app.get('/api/loans/query/:staffId', cacheMiddleware(10), async (req, res) => {
+app.get('/api/loans/query/:staffId', cacheMiddleware(60), async (req, res) => {
     try {
         const { staffId } = req.params;
         const { data, error } = await supabase

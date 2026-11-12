@@ -11,7 +11,9 @@ export default function Members() {
   const [nameError, setNameError] = useState("");
   const [loading, setLoading] = useState(true);
   const [addLoading, setAddLoading] = useState(false); // ✅ Add button loading
-  const [deletingId, setDeletingId] = useState(null); // ✅ Delete member loading
+  const [deletingId, setDeletingId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteError, setDeleteError] = useState(""); // ✅ Delete member loading
   const [error, setError] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:5005";
@@ -29,8 +31,10 @@ export default function Members() {
 
     const fetchData = async () => {
       try {
-        const membersRes = await axios.get(`${API_URL}/api/members/${centerId}`);
-        const loansRes = await axios.get(`${API_URL}/api/loans`);
+        const [membersRes, loansRes] = await Promise.all([
+          axios.get(`${API_URL}/api/members/${centerId}`),
+          axios.get(`${API_URL}/api/loans`, { params: { centerId, summary: 'true' } })
+        ]);
 
         const membersData = membersRes.data;
         const loansData = loansRes.data;
@@ -140,17 +144,26 @@ export default function Members() {
     }
   };
 
-  // Delete member
-  const handleDeleteMember = async (memberId, memberName) => {
-    if (!window.confirm(`Are you sure you want to delete member "${memberName}"?`)) return;
+  // Open delete confirmation alert modal
+  const handleDeleteMember = (member) => {
+    setDeleteError("");
+    setDeleteTarget(member);
+  };
+
+  // Confirm delete member
+  const confirmDeleteMember = async () => {
+    if (!deleteTarget) return;
+    const memberId = deleteTarget.id;
 
     setDeletingId(memberId);
+    setDeleteError("");
     try {
       await axios.delete(`${API_URL}/api/members/${memberId}`);
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
+      setDeleteTarget(null);
     } catch (err) {
       console.error("Error deleting member:", err);
-      alert(err.response?.data?.error || "Failed to delete member. Please try again.");
+      setDeleteError(err.response?.data?.error || "Failed to delete member. Please try again.");
     } finally {
       setDeletingId(null);
     }
@@ -480,7 +493,7 @@ export default function Members() {
 
                     {/* Delete Member Button - always red */}
                     <button
-                      onClick={() => handleDeleteMember(member.id, member.name)}
+                      onClick={() => handleDeleteMember(member)}
                       disabled={deletingId === member.id}
                       title="Delete Member"
                       className="p-3 text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-all active:scale-95 flex items-center justify-center shrink-0 shadow-sm shadow-rose-200"
@@ -501,6 +514,74 @@ export default function Members() {
         </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Alert Modal */}
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm"
+          onClick={() => { if (!deletingId) setDeleteTarget(null); }}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl border border-gray-100 w-full max-w-sm p-6 flex flex-col items-center text-center animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4 border border-rose-100">
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+
+            <h3 className="text-lg font-black text-gray-900 tracking-tight">Delete Member?</h3>
+            <p className="text-sm text-gray-500 font-medium mt-1.5">
+              Are you sure you want to delete{" "}
+              <span className="font-black text-gray-800">{capitalizeName(deleteTarget.name)}</span>?
+            </p>
+            {deleteTarget.member_no && (
+              <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-lg mt-2 tracking-widest uppercase">
+                {deleteTarget.member_no}
+              </span>
+            )}
+            {deleteTarget.loanStatus && (
+              <p className="mt-3 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 w-full">
+                Warning: This member has a {deleteTarget.loanStatus} loan record that will also be removed.
+              </p>
+            )}
+            <p className="text-[11px] text-gray-400 mt-3">This action cannot be undone.</p>
+
+            {deleteError && (
+              <div className="mt-3 p-2.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-600 text-xs font-bold w-full">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 w-full mt-6">
+              <button
+                type="button"
+                disabled={!!deletingId}
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all active:scale-95 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!!deletingId}
+                onClick={confirmDeleteMember}
+                className="flex-1 py-3 px-4 rounded-xl font-black text-xs uppercase tracking-wider bg-rose-600 text-white hover:bg-rose-700 shadow-lg shadow-rose-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-70"
+              >
+                {deletingId ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Yes, Delete</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
 
   );

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
 // Use production URL as primary fallback for mobile builds
-const API_URL = import.meta.env.VITE_API_URL || 'https://loan-application-tnvs.onrender.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://loan-application-tfxa.onrender.com';
 
 function StaffLogin() {
   const [staffId, setStaffId] = useState('');
@@ -12,8 +12,18 @@ function StaffLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [serverReady, setServerReady] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  // Wake up Render free-tier server immediately when login page opens
+  useEffect(() => {
+    let active = true;
+    axios.get(`${API_URL}/health`, { timeout: 65000 })
+      .then(() => { if (active) setServerReady(true); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -29,7 +39,7 @@ function StaffLogin() {
       const response = await axios.post(`${API_URL}/staff/login`, {
         staff_id: normalizedStaffId,
         password: normalizedPassword
-      });
+      }, { timeout: 65000 });
 
       console.log('Login response:', response.data);
 
@@ -49,8 +59,12 @@ function StaffLogin() {
       // Direct navigation to centers to avoid extra redirects
       navigate('/centers');
     } catch (err) {
-      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Invalid Staff ID or password';
-      setError(errorMessage);
+      if (!err.response || err.code === 'ECONNABORTED') {
+        setError('Server is waking up or network timed out. Please wait a few seconds and try again.');
+      } else {
+        const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Invalid Staff ID or password';
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -167,7 +181,10 @@ function StaffLogin() {
             Access strictly monitored for <span className="text-indigo-700 font-black">Sindhuja Officers</span>
           </p>
           <div className="mt-4 flex items-center justify-center gap-4 text-[10px] font-black uppercase tracking-widest text-indigo-300">
-            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /> Live Server</span>
+            <span className="flex items-center gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${serverReady ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+              {serverReady ? 'Live Server' : 'Waking Server...'}
+            </span>
             <span className="opacity-30">•</span>
             <span>Secured SSL</span>
           </div>

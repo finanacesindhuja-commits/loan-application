@@ -23,8 +23,10 @@ export default function Tracking() {
     const fetchLoans = async () => {
       try {
         setLoading(true);
-        // Fetch all loans - we'll filter by staffId in the frontend for now
-        const res = await axios.get(`${API_URL}/api/loans`);
+        // Fetch staff loans (lightweight summary)
+        const res = await axios.get(`${API_URL}/api/loans`, {
+          params: { staffId, summary: 'true' }
+        });
         const staffLoans = res.data.filter(l => l.staff_id?.toUpperCase() === staffId);
         setLoans(staffLoans);
         setError("");

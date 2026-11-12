@@ -34,7 +34,7 @@ function Query() {
   const [activeLoanForCrop, setActiveLoanForCrop] = useState(null);
 
   // Use production URL as primary fallback for mobile builds
-  const API_URL = import.meta.env.VITE_API_URL || 'https://loan-application-tnvs.onrender.com';
+  const API_URL = import.meta.env.VITE_API_URL || 'https://loan-application-tfxa.onrender.com';
 
   useEffect(() => {
     if (user?.staff_id) {
