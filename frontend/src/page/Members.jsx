@@ -33,7 +33,10 @@ export default function Members() {
       try {
         const [membersRes, loansRes] = await Promise.all([
           axios.get(`${API_URL}/api/members/${centerId}`),
-          axios.get(`${API_URL}/api/loans`, { params: { centerId, summary: 'true' } })
+          axios.get(`${API_URL}/api/loans`, { params: { centerId, summary: 'true' } }).catch((err) => {
+            console.warn("Could not load loans summary:", err);
+            return { data: [] };
+          })
         ]);
 
         const membersData = membersRes.data;
@@ -49,7 +52,7 @@ export default function Members() {
             ...m,
             id: Number(m.id),
             loanStatus: loan ? loan.status : null,
-            loanAppId: loan ? loan.loan_app_id : null, // Store the APP-XXXXXX ID
+            loanAppId: loan ? (loan.loan_app_id || `APP-${loan.id}`) : null, // Store the APP-XXXXXX ID
           };
         });
 

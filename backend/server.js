@@ -356,20 +356,23 @@ app.get('/api/members/lookup/:memberNo', async (req, res) => {
             member = m4;
         }
 
-        // Strategy 5: Fallback — search by Loan App ID (e.g. APP-XXXXXX or XXXXXX)
+        // Strategy 5: Fallback — search by Loan ID (e.g. APP-XXXXXX or numeric ID)
         if (!member) {
-            const { data: loanByAppId } = await supabase
-                .from('loans')
-                .select('member_id')
-                .or(`loan_app_id.eq.${cleanNo},loan_app_id.eq.APP-${cleanNo}`)
-                .maybeSingle();
-            if (loanByAppId?.member_id) {
-                const { data: m5 } = await supabase
-                    .from('members')
-                    .select('*')
-                    .eq('id', loanByAppId.member_id)
+            const cleanLoanId = cleanNo.replace(/^APP-/i, '').trim();
+            if (!isNaN(cleanLoanId) && cleanLoanId.length > 0) {
+                const { data: loanById } = await supabase
+                    .from('loans')
+                    .select('member_id')
+                    .eq('id', Number(cleanLoanId))
                     .maybeSingle();
-                member = m5;
+                if (loanById?.member_id) {
+                    const { data: m5 } = await supabase
+                        .from('members')
+                        .select('*')
+                        .eq('id', loanById.member_id)
+                        .maybeSingle();
+                    member = m5;
+                }
             }
         }
 
@@ -466,7 +469,7 @@ app.get('/api/loans', cacheMiddleware(60), async (req, res) => {
     try {
         const { centerId, staffId, summary } = req.query;
         const selectFields = summary === 'true'
-            ? 'id, member_id, center_id, staff_id, person_name, center_name, status, loan_app_id, created_at, members(member_no)'
+            ? 'id, member_id, center_id, staff_id, person_name, center_name, status, created_at, members(member_no)'
             : '*, members(member_no)';
 
         // Order by newest first so member list always shows the LATEST loan status
@@ -600,7 +603,7 @@ app.post('/api/loans', upload.fields([
             const activeStatuses = ["PENDING", "APPROVED", "DISBURSED", "READY FOR PD", "QUERY", "RESUBMITTED", "CREDITED"];
             const { data: existingLoan, error: checkError } = await supabase
                 .from('loans')
-                .select('id, status, loan_app_id')
+                .select('id, status')
                 .eq('aadhar_no', aadharNo)
                 .in('status', activeStatuses)
                 .limit(1)
@@ -611,10 +614,10 @@ app.post('/api/loans', upload.fields([
             }
 
             if (existingLoan) {
-                console.log(`DEBUG: Duplicate loan blocked for Aadhaar: ${aadharNo}. Existing ID: ${existingLoan.loan_app_id}`);
+                console.log(`DEBUG: Duplicate loan blocked for Aadhaar: ${aadharNo}. Existing ID: ${existingLoan.id}`);
                 return res.status(409).json({ 
                     error: 'DUPLICATE_LOAN', 
-                    message: `This member (Aadhaar: ${aadharNo}) already has an active loan application (${existingLoan.loan_app_id}).` 
+                    message: `This member (Aadhaar: ${aadharNo}) already has an active loan application (ID: APP-${existingLoan.id}).` 
                 });
             }
         }
@@ -695,7 +698,7 @@ app.post('/api/loans', upload.fields([
         }
 
         console.log(`✅ Loan Submission Successful! ID: ${data.id}, AppID: ${loanAppId}`);
-        res.json({ message: 'Loan submitted', loanId: data.id, loanAppId: data.loan_app_id });
+        res.json({ message: 'Loan submitted', loanId: data.id, loanAppId: `APP-${data.id}` });
     } catch (err) {
         console.error('❌ CRITICAL LOAN ERROR:', err);
         res.status(500).json({ error: err.message || 'Error submitting loan application' });
@@ -733,7 +736,7 @@ const autoCleanupClosedLoans = async () => {
         // 1. Find all CLOSED loans older than 30 days
         const { data: closedLoans, error: fetchError } = await supabase
             .from('loans')
-            .select('id, loan_app_id, person_name, created_at')
+            .select('id, person_name, created_at')
             .eq('status', 'CLOSED')
             .lt('created_at', cutoffDate);
 
@@ -772,7 +775,7 @@ const autoCleanupClosedLoans = async () => {
             console.error('🧹 CLEANUP ERROR deleting loans:', loanDeleteError.message);
         } else {
             closedLoans.forEach(l => {
-                console.log(`🧹 CLEANUP: Deleted loan ${l.loan_app_id || l.id} (${l.person_name}) — closed on ${l.created_at}`);
+                console.log(`🧹 CLEANUP: Deleted loan ${l.id} (${l.person_name}) — closed on ${l.created_at}`);
             });
             console.log(`✅ CLEANUP DONE: ${closedLoans.length} loan(s) and their schedules deleted.`);
         }
